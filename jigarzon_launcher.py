@@ -505,7 +505,9 @@ class Jigarzon:
             while True:
                 kind, val = self.jobs.get_nowait()
                 if kind == "log" and hasattr(self, "console") and self.console.winfo_exists():
+                    self.console.configure(state="normal")
                     self.console.insert("end", val + "\n"); self.console.see("end")
+                    self.console.configure(state="disabled")
                 elif kind == "status": self.status.configure(text="●  " + val[0], text_color=CYAN if val[1] else GREEN)
                 elif kind == "progress": self.status.configure(text="●  " + val, text_color=CYAN)
                 elif kind == "horizon":
