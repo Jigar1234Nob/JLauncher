@@ -1,6 +1,7 @@
 import hashlib, json, os, platform, queue, subprocess, threading, urllib.request, zipfile
 from pathlib import Path
 import tkinter as tk
+import webbrowser
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
@@ -285,6 +286,8 @@ class Jigarzon:
             try:
                 proc = subprocess.Popen(cmd, cwd=str(exe.parent), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                         text=True, encoding="utf-8", errors="replace", bufsize=1)
+                if label == "Opening Microsoft sign-in":
+                    webbrowser.open("https://www.microsoft.com/link")
                 if label.startswith("Playing Minecraft "):
                     version = label[len("Playing Minecraft "):].removesuffix(" using Jigarzon Launcher")
                     self.game_active = True; self.jobs.put(("discord", version))
