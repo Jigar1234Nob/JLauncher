@@ -434,6 +434,8 @@ def main():
             bar.set(1); label.configure(text="Horizon is ready")
             root.after(650, finish); return
         if not app.busy and app.exe.get(): root.after(500, finish); return
+        if not app.busy and "failed" in app.status.cget("text").lower():
+            root.after(300, finish); return
         root.after(250, watch)
     def finish():
         try: splash.destroy()
