@@ -124,11 +124,11 @@ class Jigarzon:
 
     def button(self, p, text, command, primary=False, **kw):
         return ctk.CTkButton(p, text=text, command=command, height=kw.pop("height", 40),
-            corner_radius=13, font=("Segoe UI", 11, "bold"), fg_color=PURPLE if primary else ALT,
+            corner_radius=9, font=("Segoe UI", 10, "bold"), fg_color=PURPLE if primary else ALT,
             hover_color="#AD91FF" if primary else "#29364D", text_color="white", **kw)
 
     def card(self, p):
-        return ctk.CTkFrame(p, fg_color=PANEL, corner_radius=20, border_width=1, border_color=BORDER)
+        return ctk.CTkFrame(p, fg_color=PANEL, corner_radius=12, border_width=1, border_color=BORDER)
 
     def build(self):
         shell=ctk.CTkFrame(self.root,fg_color=BG,corner_radius=0);shell.pack(fill="both",expand=True)
@@ -400,17 +400,11 @@ class Jigarzon:
     def signin(self): self.command(["account", "sign-in"], "Opening Microsoft sign-in")
 
     def play(self):
-        if not self.setup_complete:self.page("Tutorial");return
-        tag = self.version.get().strip()
-        if not tag or tag == "latest":
-            self.install(); return
-        if tag not in self.installed:
-            if messagebox.askyesno(APP, tag + " is not installed. Install it now?"):
-                self.command(["install", tag], "Installing Horizon " + tag, lambda _: self.play_version(tag))
+        if not self.setup_complete:
+            self.page("Tutorial")
             return
-        self.play_version(tag)
-
-    def play_version(self, tag): self.command(["play", "--instance", self.selected_instance], "Playing Minecraft " + tag + " using Jigarzon Launcher")
+        self.command(["play", "--instance", self.selected_instance],
+                     "Playing Minecraft latest using Jigarzon Launcher")
 
     def load_instances(self): self.command(["instance", "list"], "Loading instances", self.instances_done, True)
     def instances_done(self, out):
@@ -488,7 +482,7 @@ def main():
     splash = ctk.CTkToplevel(root); splash.geometry("520x330"); splash.resizable(False, False)
     splash.overrideredirect(True); splash.configure(fg_color=BG); splash.update_idletasks()
     x=(splash.winfo_screenwidth()-520)//2; y=(splash.winfo_screenheight()-330)//2; splash.geometry(f"520x330+{x}+{y}")
-    frame=ctk.CTkFrame(splash, fg_color=PANEL, corner_radius=27, border_width=1, border_color=BORDER); frame.pack(fill="both", expand=True, padx=2, pady=2)
+    frame=ctk.CTkFrame(splash, fg_color=PANEL, corner_radius=16, border_width=1, border_color=BORDER); frame.pack(fill="both", expand=True, padx=2, pady=2)
     logo=ctk.CTkFrame(frame, width=60, height=60, corner_radius=19, fg_color=PURPLE); logo.pack(pady=(35, 12)); logo.pack_propagate(False)
     ctk.CTkLabel(logo, text="J", font=("Segoe UI", 31, "bold"), text_color="white").pack(expand=True)
     ctk.CTkLabel(frame, text="JIGARZON", font=("Segoe UI", 24, "bold"), text_color=TEXT).pack()
