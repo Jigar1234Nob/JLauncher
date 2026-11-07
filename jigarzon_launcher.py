@@ -1,11 +1,15 @@
-import hashlib, json, os, platform, queue, re, subprocess, threading, urllib.request, zipfile
+import hashlib, json, os, platform, queue, re, subprocess, sys, threading, urllib.request, zipfile
 from pathlib import Path
 import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
+from tkinterdnd2 import DND_FILES, TkinterDnD
 
 APP = "Jigarzon Launcher"
+APP_VERSION = "1.0.0"
+APP_RELEASES = "https://api.github.com/repos/Jigar1234Nob/jigarzon-launcher/releases/latest"
+HORIZON_README = "https://raw.githubusercontent.com/horizon-rust/horizon/main/README.md"
 DISCORD_APP_ID = os.getenv("JIGARZON_DISCORD_APP_ID", "").strip()
 BG, SIDE, PANEL, ALT, BORDER = "#17191F", "#111319", "#20242D", "#292F3A", "#343C49"
 TEXT, MUTED, PURPLE, CYAN, GREEN = "#F4F6FB", "#A1AABC", "#8B6CF6", "#63D4E6", "#63D6A0"
@@ -99,7 +103,10 @@ class Jigarzon:
     def __init__(self, root):
         self.root, self.jobs, self.busy = root, queue.Queue(), False
         self.root.title(APP); self.root.geometry("1220x790"); self.root.minsize(1020, 680)
-        self.root.configure(fg_color=BG)
+        self.root.configure(bg=BG)
+        self.set_window_icon(self.root)
+        self.root.drop_target_register(DND_FILES)
+        self.root.dnd_bind("<<Drop>>", self.on_drop)
         saved = settings()
         self.exe = tk.StringVar(value=saved.get("horizon_path", ""))
         self.version = tk.StringVar(value=saved.get("version", "latest"))
@@ -109,10 +116,13 @@ class Jigarzon:
         self.setup_complete = bool(saved.get("setup_complete", False))
         self.setup_step = int(saved.get("setup_step", 0))
         self.rpc, self.game_active = None, False
+        self.minecraft_version = "26.3"
         self.nav = {}
         self.build()
         self.root.after(100, self.poll)
         self.root.after(250, self.connect_startup)
+        self.root.after(800, self.check_launcher_update)
+        self.root.after(1000, self.check_horizon_game_version)
 
     def save(self):
         save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "selected_instance": self.selected_instance, "setup_complete": self.setup_complete, "setup_step": self.setup_step})
@@ -190,13 +200,13 @@ class Jigarzon:
         self.button(row,"Manage instances",lambda:self.page("Instances")).pack(side="right")
         play=self.card(self.body);play.pack(fill="x",pady=(0,13))
         self.label(play,"MINECRAFT JAVA EDITION",9,MUTED,True).pack(anchor="w",padx=21,pady=(16,3))
-        self.label(play,"Horizon Nightly · Latest build",15,TEXT,True).pack(anchor="w",padx=21,pady=(0,12))
+        self.horizon_build_label=self.label(play,"Horizon Nightly Latest Build ("+self.minecraft_version+")",15,TEXT,True)
+        self.horizon_build_label.pack(anchor="w",padx=21,pady=(0,12))
         self.button(play,"▶   PLAY MINECRAFT",self.play,True,height=47).pack(fill="x",padx=21,pady=(0,17))
         news=self.card(self.body);news.pack(fill="both",expand=True)
-        self.label(news,"NEWS & UPDATES",10,CYAN,True).pack(anchor="w",padx=19,pady=(16,6))
-        self.label(news,"Horizon Nightly",15,TEXT,True).pack(anchor="w",padx=19)
-        self.label(news,"Jigarzon follows the latest published Horizon Nightly. Check release notes for new features and fixes.",10,MUTED,wraplength=760).pack(anchor="w",padx=19,pady=(5,12))
-        self.button(news,"View Horizon release notes",lambda:webbrowser.open("https://github.com/horizon-rust/horizon/releases")).pack(anchor="w",padx=19,pady=(0,15))
+        self.label(news,"JIGARZON RELEASE",10,CYAN,True).pack(anchor="w",padx=19,pady=(20,7))
+        self.label(news,"Jigarzon Launcher v1.00 has released!",21,TEXT,True).pack(anchor="w",padx=19)
+        self.label(news,"Your Minecraft worlds, instances and mods. One launcher, with a cleaner way to play.",10,MUTED,wraplength=760).pack(anchor="w",padx=19,pady=(7,20))
 
     def instances_page(self):
         head=ctk.CTkFrame(self.body,fg_color="transparent");head.pack(fill="x",pady=(0,10))
@@ -328,8 +338,54 @@ class Jigarzon:
         self.mod_query=ctk.CTkEntry(row,placeholder_text="Search mods…",height=36,fg_color=ALT,border_color=BORDER,corner_radius=8);self.mod_query.pack(side="left",fill="x",expand=True,padx=(0,7))
         self.button(row,"Search",self.search_mods,True,height=36).pack(side="left")
         self.button(row,"Installed",self.list_mods,height=36).pack(side="left",padx=(7,0))
+        self.button(row,"OPEN MODS FOLDER",self.open_selected_mod_folder,height=36).pack(side="right",padx=(7,0))
+        self.drop_hint=self.label(card,"Or drag a Horizon .mrpack / supported modpack ZIP onto this window to import it.",9,MUTED)
+        self.drop_hint.pack(anchor="w",padx=15,pady=(0,10))
         self.mod_list=ctk.CTkScrollableFrame(self.body,fg_color=PANEL,corner_radius=11,border_width=1,border_color=BORDER);self.mod_list.pack(fill="both",expand=True)
         self.label(self.mod_list,"Search for mods or view installed content.",10,MUTED).pack(anchor="w",padx=13,pady=15)
+    def selected_instance_game_dir(self):
+        for item in self.instances:
+            if isinstance(item,dict) and (item.get("name") or item.get("id")) == self.selected_instance:
+                for key in ("game_dir","game_directory","home","path","directory"):
+                    value=item.get(key)
+                    if value:
+                        p=Path(value).expanduser()
+                        if p.exists():return p
+        exe=Path(self.exe.get()).resolve() if self.exe.get() else None
+        candidates=[]
+        if exe:
+            candidates += [exe.parent/"game",exe.parent/"data",exe.parent]
+        candidates += [data_dir()/"Horizon"/"game",data_dir()/"Horizon"]
+        for p in candidates:
+            if p.exists() and (p/"options.txt").exists():return p
+        return None
+
+    def open_selected_mod_folder(self):
+        game_dir=self.selected_instance_game_dir()
+        if not game_dir:
+            messagebox.showwarning(APP,"Could not determine the selected instance's game folder. Refresh the Instances list and try again.")
+            return
+        folder=game_dir/"horizon-mods"
+        folder.mkdir(parents=True,exist_ok=True)
+        os.startfile(str(folder))
+
+    def on_drop(self,event):
+        try:paths=[Path(p.strip("{}")) for p in self.root.tk.splitlist(event.data)]
+        except Exception:
+            messagebox.showwarning(APP,"Windows did not provide a readable dropped file path.")
+            return
+        if not paths:return
+        accepted=[p for p in paths if p.is_file() and p.suffix.lower() in (".mrpack",".zip")]
+        unsupported=[p.name for p in paths if p.is_file() and p.suffix.lower()==".jar"]
+        if unsupported:
+            messagebox.showinfo(APP,"Raw Java .jar mods cannot simply be dropped into Horizon. Horizon needs to check and port supported mod content first. Use the in-app mod browser for compatible mods.")
+        if accepted:
+            for pack in accepted:
+                if messagebox.askyesno(APP,"Import "+pack.name+" with Horizon? Modpacks are imported as their own instance."):
+                    self.command(["modpack","import",str(pack)],"Importing "+pack.name,lambda _:self.load_instances())
+        elif not unsupported:
+            messagebox.showinfo(APP,"Drop a Horizon .mrpack or supported modpack .zip file here.")
+
     def show_mod_output(self,out,installed=False):
         if not hasattr(self,"mod_list") or not self.mod_list.winfo_exists():return
         for w in self.mod_list.winfo_children():w.destroy()
@@ -378,10 +434,64 @@ class Jigarzon:
     def connect_startup(self):
         found = locate_horizon()
         if found:
-            self.exe.set(str(found)); self.save(); self.log("Horizon launcher found."); self.refresh()
+            self.exe.set(str(found)); self.save(); self.log("Horizon launcher found.")
             if not self.setup_complete:self.page("Tutorial")
+            self.command(["install","latest"],"Checking for Horizon updates",lambda _:self.refresh())
         else:
             self.log("Horizon is missing. Downloading the official package…"); self.download_horizon()
+
+    def check_horizon_game_version(self):
+        def work():
+            try:
+                req=urllib.request.Request(HORIZON_README,headers={"User-Agent":"Jigarzon-Launcher"})
+                with urllib.request.urlopen(req,timeout=12) as response: body=response.read().decode("utf-8","replace")
+                match=re.search(r"Minecraft: Java Edition\\s+(\\d+\\.\\d+)",body)
+                if match:self.jobs.put(("game_version",match.group(1)))
+            except Exception as e:self.jobs.put(("log","Could not check the current Minecraft version: "+str(e)))
+        threading.Thread(target=work,daemon=True).start()
+
+    def check_launcher_update(self):
+        def work():
+            try:
+                req=urllib.request.Request(APP_RELEASES,headers={"User-Agent":"Jigarzon-Launcher","Accept":"application/vnd.github+json"})
+                with urllib.request.urlopen(req,timeout=15) as response: release=json.loads(response.read().decode("utf-8"))
+                tag=str(release.get("tag_name","")).lstrip("v")
+                def version_tuple(v):
+                    found=re.findall(r"\\d+",v)
+                    return tuple(int(x) for x in found[:3]) if found else (0,)
+                if version_tuple(tag)<=version_tuple(APP_VERSION):return
+                asset=next((a for a in release.get("assets",[]) if a.get("name")=="Jigarzon-Setup.exe"),None)
+                if not asset: self.jobs.put(("log","Jigarzon update "+tag+" is published, but its installer asset is missing."));return
+                self.jobs.put(("log","Jigarzon Launcher update "+tag+" found. Downloading installer…"))
+                req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
+                installer=data_dir()/"Jigarzon-Setup-update.exe"
+                digest=hashlib.sha256()
+                with urllib.request.urlopen(req,timeout=60) as response,installer.open("wb") as out:
+                    while True:
+                        block=response.read(1024*1024)
+                        if not block:break
+                        out.write(block);digest.update(block)
+                expected=asset.get("digest") or ""
+                if expected.startswith("sha256:") and digest.hexdigest().lower()!=expected.split(":",1)[1].lower():
+                    installer.unlink(missing_ok=True);raise RuntimeError("Installer SHA-256 verification failed.")
+                self.jobs.put(("launcher_update_ready",str(installer)))
+            except Exception as e:
+                # No published release yet is normal for a source checkout.
+                if "HTTP Error 404" not in str(e):self.jobs.put(("log","Jigarzon update check: "+str(e)))
+        threading.Thread(target=work,daemon=True).start()
+
+    def install_launcher_update(self,installer):
+        try:
+            subprocess.Popen([installer,"/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CLOSEAPPLICATIONS","/RESTARTAPPLICATIONS"])
+            self.root.after(300,self.root.destroy)
+        except Exception as e:messagebox.showerror(APP,"Could not start the Jigarzon update installer:\\n\\n"+str(e))
+
+    def set_window_icon(self,window):
+        try:
+            base=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
+            icon=base/"assets"/"jigarzon.ico"
+            if icon.is_file():window.iconbitmap(str(icon))
+        except Exception:pass
 
     def download_horizon(self):
         if self.busy: return
@@ -519,6 +629,13 @@ class Jigarzon:
                     messagebox.showerror(APP, "Could not download Horizon:\n\n" + val + "\n\nRetry from Settings.")
                 elif kind == "discord": self.discord_start(val)
                 elif kind == "signin_code": self.show_signin_code(val)
+                elif kind == "game_version":
+                    self.minecraft_version=val
+                    if hasattr(self,"horizon_build_label") and self.horizon_build_label.winfo_exists():
+                        self.horizon_build_label.configure(text="Horizon Nightly Latest Build ("+val+")")
+                elif kind == "launcher_update_ready":
+                    self.log("A newer Jigarzon version is ready. Starting the installer.")
+                    self.install_launcher_update(val)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
                     if label.startswith("Playing Minecraft "):
@@ -542,7 +659,7 @@ class Jigarzon:
         self.root.after(120, self.poll)
 
 def main():
-    root = ctk.CTk(); root.withdraw()
+    root = TkinterDnD.Tk(); root.withdraw()
     splash = ctk.CTkToplevel(root); splash.geometry("520x330"); splash.resizable(False, False)
     splash.overrideredirect(True); splash.configure(fg_color=BG); splash.update_idletasks()
     x=(splash.winfo_screenwidth()-520)//2; y=(splash.winfo_screenheight()-330)//2; splash.geometry(f"520x330+{x}+{y}")
@@ -557,6 +674,7 @@ def main():
     bar=ctk.CTkProgressBar(frame, width=390, height=8, corner_radius=8, progress_color=PURPLE, fg_color=ALT); bar.pack(pady=(0, 13)); bar.set(.04)
     label=ctk.CTkLabel(frame, text="Starting Jigarzon…", font=("Segoe UI", 10), text_color=MUTED); label.pack()
     app=Jigarzon(root)
+    app.set_window_icon(splash)
     def watch():
         label.configure(text=app.status.cget("text").replace("●  ", ""))
         if app.exe.get() and Path(app.exe.get()).is_file():
