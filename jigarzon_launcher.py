@@ -486,6 +486,11 @@ class Jigarzon:
             messagebox.showerror(APP,"The Inno Setup uninstaller was not found. Install Jigarzon using Jigarzon-Setup.exe first.")
             return
         if not messagebox.askyesno(APP,"Uninstall Jigarzon Launcher now?"):return
+        # Reset first-run progress before uninstalling. The settings file lives
+        # outside the install directory and is intentionally preserved by Inno Setup.
+        self.setup_complete = False
+        self.setup_step = 0
+        self.save()
         if not keep:
             import shutil
             shutil.rmtree(data_dir()/"Horizon",ignore_errors=True)
@@ -506,6 +511,12 @@ class Jigarzon:
                         block=response.read(1024*1024)
                         if not block:break
                         out.write(block)
+                # Reinstalling the launcher should start the guided setup again,
+                # even when the user keeps the existing Horizon/game files.
+                saved = settings()
+                saved["setup_complete"] = False
+                saved["setup_step"] = 0
+                save_settings(saved)
                 self.jobs.put(("reinstall_ready",str(target)))
             except Exception as e:self.jobs.put(("log","Reinstall download failed: "+str(e)))
         threading.Thread(target=work,daemon=True).start()
