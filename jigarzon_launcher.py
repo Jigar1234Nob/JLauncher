@@ -77,6 +77,8 @@ class Jigarzon:
         saved = load_settings()
         self.exe = tk.StringVar(value=saved.get("horizon_path", ""))
         self.selected_version = tk.StringVar(value=saved.get("version", ""))
+        self.discord_app_id = tk.StringVar(value=saved.get("discord_app_id", ""))
+        self.discord_rpc = None
         self.status = tk.StringVar(value="Horizon not connected")
         self.current_page = "Home"
         self.build_ui()
@@ -88,7 +90,8 @@ class Jigarzon:
     def save(self):
         settings_file().write_text(json.dumps({
             "horizon_path": self.exe.get(),
-            "version": self.selected_version.get()
+            "version": self.selected_version.get(),
+            "discord_app_id": self.discord_app_id.get().strip()
         }, indent=2), encoding="utf-8")
 
     def style(self):
@@ -341,6 +344,17 @@ class Jigarzon:
                  relief="flat", font=("Segoe UI", 9)).pack(side="left", fill="x", expand=True, ipady=10, padx=(0, 9))
         self.button(row, "Browse…", self.browse_horizon).pack(side="right")
         self.button(card, "Connect and refresh", self.refresh_all, True, True).pack(anchor="w", pady=(12, 0))
+
+        discord = tk.Frame(self.page_host, bg=PANEL, highlightthickness=1, highlightbackground=BORDER)
+        discord.pack(fill="x", pady=(0, 12))
+        self.section(discord, "Discord Rich Presence", "Show the Minecraft version you're playing on your Discord profile.")
+        discord.pack_configure(padx=20, pady=18)
+        self.label(discord, "Discord Application ID", 9, TEXT, True).pack(anchor="w", pady=(12, 5))
+        tk.Entry(discord, textvariable=self.discord_app_id, bg=PANEL2, fg=TEXT,
+                 insertbackground=TEXT, relief="flat", font=("Segoe UI", 9)).pack(fill="x", ipady=9)
+        self.label(discord, "Create a Discord application at discord.com/developers/applications and paste its Application ID here. Keep the Discord desktop app running.", 8, MUTED, wraplength=800, justify="left").pack(anchor="w", pady=(7, 0))
+        self.button(discord, "Save Discord settings", self.save, True, True).pack(anchor="w", pady=(10, 0))
+
         info = tk.Frame(self.page_host, bg=PANEL, highlightthickness=1, highlightbackground=BORDER)
         info.pack(fill="x")
         self.section(info, "About Jigarzon", "A Prism-inspired interface for managing Horizon builds and Minecraft instances.")
@@ -377,6 +391,9 @@ class Jigarzon:
                 proc = subprocess.Popen(command, cwd=str(exe.parent), stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT, text=True, encoding="utf-8",
                                         errors="replace", bufsize=1)
+                if label.startswith("Playing Minecraft "):
+                    version = label[len("Playing Minecraft "):].removesuffix(" using Jigarzon Launcher")
+                    self.queue.put(("discord_start", version))
                 lines = []
                 for line in proc.stdout:
                     line = line.rstrip()
@@ -512,6 +529,40 @@ class Jigarzon:
         if name:
             self.run_command(["instance", "select", name], f"Selecting instance {name}")
 
+    def start_discord_presence(self, version):
+        app_id = self.discord_app_id.get().strip()
+        if not app_id:
+            self.write_log("Discord Rich Presence is not configured. Add a Discord Application ID in Settings.")
+            return
+
+        def connect():
+            try:
+                from pypresence import Presence
+                rpc = Presence(app_id)
+                rpc.connect()
+                rpc.update(
+                    details=f"Playing Minecraft ({version}) using Jigarzon Launcher",
+                    state="Minecraft Java Edition",
+                    large_text="Jigarzon Launcher"
+                )
+                self.discord_rpc = rpc
+                self.queue.put(("log", "Discord Rich Presence connected."))
+            except Exception as error:
+                self.queue.put(("log", f"Discord Rich Presence unavailable: {error}"))
+        threading.Thread(target=connect, daemon=True).start()
+
+    def stop_discord_presence(self):
+        rpc = self.discord_rpc
+        self.discord_rpc = None
+        if rpc:
+            def disconnect():
+                try:
+                    rpc.clear()
+                    rpc.close()
+                except Exception:
+                    pass
+            threading.Thread(target=disconnect, daemon=True).start()
+
     def poll(self):
         try:
             while True:
@@ -525,9 +576,15 @@ class Jigarzon:
                     self.status.set(message)
                     self.status_dot.configure(fg=CYAN if active else GREEN)
                     self.status_label.configure(text=message[:30])
+                elif kind == "discord_start":
+                    self.start_discord_presence(value)
+                elif kind == "discord_stop":
+                    self.stop_discord_presence()
                 elif kind == "result":
                     code, output, label, callback, is_json = value
                     self.busy = False
+                    if label.startswith("Playing Minecraft "):
+                        self.stop_discord_presence()
                     if is_json and output:
                         self.write_log(output)
                     if code == 0:
