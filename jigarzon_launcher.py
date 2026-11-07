@@ -5,6 +5,7 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 APP = "Jigarzon Launcher"
+DISCORD_APP_ID = os.getenv("JIGARZON_DISCORD_APP_ID", "").strip()
 BG, SIDE, PANEL, ALT, BORDER = "#090B12", "#0D111B", "#141A28", "#1B2435", "#27334A"
 TEXT, MUTED, PURPLE, CYAN, GREEN = "#F4F6FC", "#91A0B8", "#9875FF", "#62DCE8", "#69D9A4"
 RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=100"
@@ -41,7 +42,7 @@ def install_horizon(progress):
     release = next((r for r in releases if str(r.get("tag_name", "")).startswith("launcher@")), None)
     if not release: raise RuntimeError("No official Horizon launcher release was found.")
     arm = (platform.machine().lower() in ("arm64", "aarch64") or os.getenv("PROCESSOR_ARCHITECTURE", "").upper() == "ARM64" or os.getenv("PROCESSOR_ARCHITEW6432", "").upper() == "ARM64")
-    filename = "horizon-launcher-windows-arm64.zip" if arm else "horizon-launcher-windows-x64.zip"
+    filename = "horizon-launcher-windows-x64.zip"
     asset = next((a for a in release.get("assets", []) if a.get("name") == filename), None)
     if not asset: raise RuntimeError("The official release is missing " + filename)
     archive = data_dir() / "horizon-package.zip"
@@ -101,7 +102,7 @@ class Jigarzon:
         saved = settings()
         self.exe = tk.StringVar(value=saved.get("horizon_path", ""))
         self.version = tk.StringVar(value=saved.get("version", ""))
-        self.discord_id = tk.StringVar(value=saved.get("discord_app_id", ""))
+        self.signin_pending = False
         self.installed, self.available, self.instances = [], [], []
         self.rpc, self.game_active = None, False
         self.nav = {}
@@ -110,7 +111,7 @@ class Jigarzon:
         self.root.after(250, self.connect_startup)
 
     def save(self):
-        save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "discord_app_id": self.discord_id.get().strip()})
+        save_settings({"horizon_path": self.exe.get(), "version": self.version.get()})
 
     def label(self, p, text, size=11, color=TEXT, bold=False, **kw):
         return ctk.CTkLabel(p, text=text, text_color=color, font=("Segoe UI", size, "bold" if bold else "normal"),
@@ -144,7 +145,7 @@ class Jigarzon:
         stat = ctk.CTkFrame(side, fg_color=PANEL, corner_radius=16); stat.pack(fill="x", padx=14, pady=14)
         self.label(stat, "HORIZON STATUS", 9, MUTED, True).pack(anchor="w", padx=14, pady=(12, 3))
         self.status = self.label(stat, "●  Checking installation", 10, CYAN); self.status.pack(anchor="w", padx=14, pady=(0, 12))
-        self.label(side, "JIGARZON  •  2.0", 9, "#65718A", True).pack(side="bottom", anchor="w", padx=20, pady=16)
+        self.label(side, "JIGARZON", 9, "#65718A", True).pack(side="bottom", anchor="w", padx=20, pady=16)
         main = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0); main.pack(side="left", fill="both", expand=True)
         header = ctk.CTkFrame(main, fg_color="transparent", height=78); header.pack(fill="x", padx=30, pady=(18, 8)); header.pack_propagate(False)
         hleft = ctk.CTkFrame(header, fg_color="transparent"); hleft.pack(side="left", fill="y")
@@ -162,7 +163,7 @@ class Jigarzon:
         for w in self.body.winfo_children(): w.destroy()
         for n, b in self.nav.items(): b.configure(fg_color=ALT if n == name else "transparent", text_color=CYAN if n == name else TEXT)
         self.title.configure(text=name)
-        self.subtitle.configure(text={"Home":"Your Minecraft library, ready when you are.","Instances":"Separate folders for worlds and configurations.","Tutorial":"From first download to first world.","Settings":"Manage Horizon and launcher preferences."}[name])
+        self.subtitle.configure(text={"Home":"Latest Horizon build. One click to play.","Instances":"Separate game folders.","Tutorial":"Set up Minecraft and sign in.","Settings":"Launcher preferences."}[name])
         {"Home":self.home,"Instances":self.instances_page,"Tutorial":self.tutorial,"Settings":self.settings}[name]()
 
     def home(self):
@@ -176,18 +177,16 @@ class Jigarzon:
         row = ctk.CTkFrame(self.body, fg_color="transparent"); row.pack(fill="x", pady=(0, 15))
         v, g = self.card(row), self.card(row); v.pack(side="left", fill="both", expand=True, padx=(0, 8)); g.pack(side="left", fill="both", expand=True, padx=(8, 0))
         self.section(v, "Choose your version", "Browse official Horizon releases and nightly builds."); v.pack_configure(padx=19, pady=18)
-        self.combo = ctk.CTkComboBox(v, variable=self.version, values=["Loading…"], state="readonly", height=42, corner_radius=12, fg_color=ALT, border_color=BORDER, button_color=PURPLE)
-        self.combo.pack(fill="x", pady=(14, 10))
-        line = ctk.CTkFrame(v, fg_color="transparent"); line.pack(fill="x")
-        self.button(line, "Browse releases", self.releases, height=37).pack(side="left")
-        self.button(line, "Install selected", self.install, True, height=37).pack(side="right")
-        self.section(g, "Minecraft game files", "Horizon downloads verified resources from Mojang."); g.pack_configure(padx=19, pady=18)
+        self.label(v, "Latest Horizon Nightly", 20, TEXT, True).pack(anchor="w", pady=(18, 5))
+        self.label(v, "Jigarzon always installs the newest published build.", 10, MUTED).pack(anchor="w", pady=(0, 12))
+        self.button(v, "INSTALL / UPDATE LATEST", self.install, True, height=42).pack(fill="x")
+        self.section(g, "Minecraft files", "Download the required game files from Mojang."); g.pack_configure(padx=19, pady=18)
         self.label(g, "Assets  •  libraries  •  Java runtime", 11, TEXT).pack(anchor="w", pady=(18, 12))
         self.button(g, "DOWNLOAD & PREPARE", self.prepare, True, height=43).pack(fill="x")
         self.label(g, "Requires a Microsoft account that owns Minecraft: Java Edition.", 9, MUTED, wraplength=420).pack(anchor="w", pady=(8, 0))
         bottom = ctk.CTkFrame(self.body, fg_color="transparent"); bottom.pack(fill="both", expand=True)
         play, log = self.card(bottom), self.card(bottom); play.pack(side="left", fill="both", expand=True, padx=(0, 8)); log.pack(side="left", fill="both", expand=True, padx=(8, 0))
-        self.section(play, "Ready to play?", "Launch the selected Horizon build."); play.pack_configure(padx=19, pady=18)
+        self.section(play, "Play", "Launch the latest installed Horizon build."); play.pack_configure(padx=19, pady=18)
         self.label(play, "MAKE IT A GOOD SESSION.", 16, TEXT, True).pack(anchor="w", pady=(18, 4))
         self.label(play, "Your selected release is saved automatically.", 10, MUTED).pack(anchor="w")
         self.button(play, "▶  PLAY MINECRAFT", self.play, True, height=47).pack(fill="x", pady=(18, 8))
@@ -243,12 +242,6 @@ class Jigarzon:
         buttons = ctk.CTkFrame(c, fg_color="transparent"); buttons.pack(anchor="w", padx=19, pady=(0, 17))
         self.button(buttons, "Download / repair Horizon", self.download_horizon, True).pack(side="left")
         self.button(buttons, "Choose existing EXE", self.browse).pack(side="left", padx=8)
-        d = self.card(self.body); d.pack(fill="x", pady=(0, 13))
-        self.section(d, "Discord Rich Presence", "Show the Minecraft version on your Discord profile.")
-        self.label(d, "Discord Application ID", 10, TEXT, True).pack(anchor="w", padx=19, pady=(13, 5))
-        ctk.CTkEntry(d, textvariable=self.discord_id, height=42, corner_radius=12, fg_color=ALT, border_color=BORDER).pack(fill="x", padx=19)
-        self.label(d, "Create an application at discord.com/developers/applications. Keep Discord desktop running.", 9, MUTED).pack(anchor="w", padx=19, pady=7)
-        self.button(d, "Save Discord settings", self.save, True).pack(anchor="w", padx=19, pady=(2, 17))
         about = self.card(self.body); about.pack(fill="x")
         self.section(about, "About Jigarzon", "An independent desktop launcher for Horizon and Minecraft Java Edition.")
         self.label(about, "Not affiliated with Mojang Studios or Microsoft.", 10, MUTED).pack(anchor="w", padx=19, pady=15)
@@ -321,15 +314,12 @@ class Jigarzon:
     def update_versions(self):
         choices = list(dict.fromkeys(self.installed + self.available))
         if hasattr(self, "combo") and self.combo.winfo_exists(): self.combo.configure(values=choices or ["No versions found"])
-        if choices and self.version.get() not in choices: self.version.set(choices[0])
+        if choices:
+            self.version.set(choices[0])
         self.save()
 
     def install(self):
-        tag = self.version.get().strip()
-        if not tag: self.releases(); return
-        if tag in self.installed: messagebox.showinfo(APP, tag + " is already installed."); return
-        if messagebox.askyesno(APP, "Download and install Horizon " + tag + "?"):
-            self.command(["install", tag], "Installing Horizon " + tag, lambda _: self.load_installed())
+        self.command(["install", "latest"], "Installing latest Horizon", lambda _: self.load_installed())
 
     def prepare(self):
         tag = self.version.get().strip()
@@ -360,15 +350,15 @@ class Jigarzon:
         if name and name.strip(): self.command(["instance", "create", name.strip()], "Creating instance", lambda _: self.load_instances())
 
     def discord_start(self, version):
-        appid = self.discord_id.get().strip()
-        if not appid: self.log("Add a Discord Application ID in Settings to enable Rich Presence."); return
+        appid = DISCORD_APP_ID
+        if not appid: self.log("Discord Rich Presence is waiting for the Jigarzon Discord Application ID to be configured in the build."); return
         def connect():
             rpc = None
             try:
                 from pypresence import Presence
                 rpc = Presence(appid); rpc.connect()
                 if not self.game_active: rpc.close(); return
-                rpc.update(details="Playing Minecraft (" + version + ") using Jigarzon Launcher",
+                rpc.update(details="Playing Minecraft " + version + " using Jigarzon Launcher",
                            state="Minecraft Java Edition", large_text="Jigarzon Launcher")
                 self.rpc = rpc; self.jobs.put(("log", "Discord Rich Presence connected."))
             except Exception as e:
@@ -404,12 +394,19 @@ class Jigarzon:
                 elif kind == "discord": self.discord_start(val)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
-                    if label.startswith("Playing Minecraft "): self.stop_discord()
+                    if label.startswith("Playing Minecraft "):
+                        self.stop_discord()
+                        if "Sign in with a Microsoft account that owns Minecraft: Java Edition to play" in out and not self.signin_pending:
+                            self.signin_pending = True
+                            self.log("No Minecraft account is signed in. Opening Microsoft sign-in in your browser…")
+                            self.command(["account", "sign-in"], "Opening Microsoft sign-in", lambda _: setattr(self, "signin_pending", False))
                     if isjson and out: self.log(out)
                     if code == 0:
+                        if label == "Opening Microsoft sign-in": self.signin_pending = False
                         self.set_status(label + " complete")
                         if callback: callback(out)
                     else:
+                        if label == "Opening Microsoft sign-in": self.signin_pending = False
                         self.set_status(label + " failed")
                         if out: self.log(out)
         except queue.Empty: pass
