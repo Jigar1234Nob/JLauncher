@@ -18,9 +18,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install PyInstaller
-        run: python -m pip install --upgrade pip pyinstaller
+        run: python -m pip install --upgrade pip pyinstaller pypresence
       - name: Build executable
-        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name JigarzonLauncher jigarzon_launcher.py
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name JigarzonLauncher --collect-all pypresence jigarzon_launcher.py
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
