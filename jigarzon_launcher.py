@@ -7,8 +7,8 @@ import customtkinter as ctk
 
 APP = "Jigarzon Launcher"
 DISCORD_APP_ID = os.getenv("JIGARZON_DISCORD_APP_ID", "").strip()
-BG, SIDE, PANEL, ALT, BORDER = "#202327", "#191C20", "#292D32", "#343A40", "#454C54"
-TEXT, MUTED, PURPLE, CYAN, GREEN = "#F1F3F5", "#A8B0B8", "#3DAEE9", "#67C7E8", "#69D9A4"
+BG, SIDE, PANEL, ALT, BORDER = "#17191F", "#111319", "#20242D", "#292F3A", "#343C49"
+TEXT, MUTED, PURPLE, CYAN, GREEN = "#F4F6FB", "#A1AABC", "#8B6CF6", "#63D4E6", "#63D6A0"
 RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=100"
 ctk.set_appearance_mode("dark")
 
@@ -105,6 +105,9 @@ class Jigarzon:
         self.version = tk.StringVar(value=saved.get("version", "latest"))
         self.signin_pending = False
         self.installed, self.available, self.instances = [], [], []
+        self.selected_instance = saved.get("selected_instance", "Horizon")
+        self.setup_complete = bool(saved.get("setup_complete", False))
+        self.setup_step = int(saved.get("setup_step", 0))
         self.rpc, self.game_active = None, False
         self.nav = {}
         self.build()
@@ -112,7 +115,7 @@ class Jigarzon:
         self.root.after(250, self.connect_startup)
 
     def save(self):
-        save_settings({"horizon_path": self.exe.get(), "version": self.version.get()})
+        save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "selected_instance": self.selected_instance, "setup_complete": self.setup_complete, "setup_step": self.setup_step})
 
     def label(self, p, text, size=11, color=TEXT, bold=False, **kw):
         return ctk.CTkLabel(p, text=text, text_color=color, font=("Segoe UI", size, "bold" if bold else "normal"),
@@ -128,129 +131,193 @@ class Jigarzon:
         return ctk.CTkFrame(p, fg_color=PANEL, corner_radius=20, border_width=1, border_color=BORDER)
 
     def build(self):
-        shell = ctk.CTkFrame(self.root, fg_color=BG, corner_radius=0); shell.pack(fill="both", expand=True)
-        side = ctk.CTkFrame(shell, width=220, fg_color=SIDE, corner_radius=0); side.pack(side="left", fill="y"); side.pack_propagate(False)
-        brand = ctk.CTkFrame(side, fg_color="transparent"); brand.pack(fill="x", padx=20, pady=(27, 34))
-        logo = ctk.CTkFrame(brand, width=46, height=46, corner_radius=15, fg_color=PURPLE); logo.pack(side="left", padx=(0, 11)); logo.pack_propagate(False)
-        self.label(logo, "J", 25, "white", True, anchor="center").pack(expand=True)
-        btxt = ctk.CTkFrame(brand, fg_color="transparent"); btxt.pack(side="left")
-        self.label(btxt, "JIGARZON", 17, TEXT, True).pack(anchor="w")
-        self.label(btxt, "GAME LIBRARY", 9, MUTED, True).pack(anchor="w")
-        self.label(side, "WORKSPACE", 9, MUTED, True).pack(anchor="w", padx=21, pady=(0, 10))
-        for name, glyph in [("Home", "⌂"), ("Instances", "▦"), ("Settings", "⚙")]:
-            b = ctk.CTkButton(side, text="   " + glyph + "    " + name, anchor="w", height=46, corner_radius=13,
-                fg_color="transparent", hover_color=ALT, text_color=TEXT, font=("Segoe UI", 12, "bold"),
-                command=lambda n=name: self.page(n))
-            b.pack(fill="x", padx=12, pady=3); self.nav[name] = b
-        ctk.CTkFrame(side, fg_color="transparent").pack(fill="both", expand=True)
-        stat = ctk.CTkFrame(side, fg_color=PANEL, corner_radius=16); stat.pack(fill="x", padx=14, pady=14)
-        self.label(stat, "HORIZON STATUS", 9, MUTED, True).pack(anchor="w", padx=14, pady=(12, 3))
-        self.status = self.label(stat, "●  Checking installation", 10, CYAN); self.status.pack(anchor="w", padx=14, pady=(0, 12))
-        self.label(side, "JIGARZON", 9, "#65718A", True).pack(side="bottom", anchor="w", padx=20, pady=16)
-        main = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0); main.pack(side="left", fill="both", expand=True)
-        header = ctk.CTkFrame(main, fg_color="transparent", height=78); header.pack(fill="x", padx=30, pady=(18, 8)); header.pack_propagate(False)
-        hleft = ctk.CTkFrame(header, fg_color="transparent"); hleft.pack(side="left", fill="y")
-        self.title = self.label(hleft, "Home", 25, TEXT, True); self.title.pack(anchor="w", pady=(7, 0))
-        self.subtitle = self.label(hleft, "Your Minecraft library, ready when you are.", 10, MUTED); self.subtitle.pack(anchor="w")
-        self.button(header, "↻ Refresh", self.refresh).pack(side="right", pady=12)
-        self.body = ctk.CTkFrame(main, fg_color="transparent"); self.body.pack(fill="both", expand=True, padx=30, pady=(0, 22))
+        shell=ctk.CTkFrame(self.root,fg_color=BG,corner_radius=0);shell.pack(fill="both",expand=True)
+        side=ctk.CTkFrame(shell,width=215,fg_color=SIDE,corner_radius=0);side.pack(side="left",fill="y");side.pack_propagate(False)
+        brand=ctk.CTkFrame(side,fg_color="transparent");brand.pack(fill="x",padx=19,pady=(25,32))
+        logo=ctk.CTkFrame(brand,width=44,height=44,corner_radius=12,fg_color=PURPLE);logo.pack(side="left",padx=(0,10));logo.pack_propagate(False)
+        self.label(logo,"J",24,"white",True,anchor="center").pack(expand=True)
+        b=ctk.CTkFrame(brand,fg_color="transparent");b.pack(side="left")
+        self.label(b,"JIGARZON",16,TEXT,True).pack(anchor="w");self.label(b,"MINECRAFT LAUNCHER",8,MUTED,True).pack(anchor="w")
+        self.label(side,"LIBRARY",9,MUTED,True).pack(anchor="w",padx=19,pady=(0,8))
+        for name,glyph in [("Home","⌂"),("Instances","▦"),("Mods","✣"),("Settings","⚙")]:
+            btn=ctk.CTkButton(side,text="   "+glyph+"    "+name,anchor="w",height=42,corner_radius=9,fg_color="transparent",hover_color=ALT,text_color=TEXT,font=("Segoe UI",11,"bold"),command=lambda n=name:self.page(n))
+            btn.pack(fill="x",padx=10,pady=3);self.nav[name]=btn
+        ctk.CTkFrame(side,fg_color="transparent").pack(fill="both",expand=True)
+        stat=ctk.CTkFrame(side,fg_color=PANEL,corner_radius=11,border_width=1,border_color=BORDER);stat.pack(fill="x",padx=12,pady=12)
+        self.label(stat,"HORIZON STATUS",8,MUTED,True).pack(anchor="w",padx=11,pady=(9,3))
+        self.status=self.label(stat,"● Checking installation",9,CYAN);self.status.pack(anchor="w",padx=11,pady=(0,9))
+        main=ctk.CTkFrame(shell,fg_color=BG,corner_radius=0);main.pack(side="left",fill="both",expand=True)
+        header=ctk.CTkFrame(main,fg_color="transparent",height=72);header.pack(fill="x",padx=27,pady=(15,7));header.pack_propagate(False)
+        left=ctk.CTkFrame(header,fg_color="transparent");left.pack(side="left",fill="y")
+        self.title=self.label(left,"Home",23,TEXT,True);self.title.pack(anchor="w",pady=(4,0))
+        self.subtitle=self.label(left,"Your Minecraft library.",10,MUTED);self.subtitle.pack(anchor="w")
+        self.button(header,"↻ Refresh",self.refresh).pack(side="right",pady=9)
+        self.body=ctk.CTkFrame(main,fg_color="transparent");self.body.pack(fill="both",expand=True,padx=27,pady=(0,18))
         self.page("Home")
 
     def section(self, p, title, sub=""):
         self.label(p, title, 13, TEXT, True).pack(anchor="w")
         if sub: self.label(p, sub, 10, MUTED, wraplength=650).pack(anchor="w", pady=(4, 0))
 
-    def page(self, name):
-        for w in self.body.winfo_children(): w.destroy()
-        for n, b in self.nav.items(): b.configure(fg_color=ALT if n == name else "transparent", text_color=CYAN if n == name else TEXT)
+    def page(self,name):
+        if not self.setup_complete and name!="Tutorial":name="Tutorial"
+        for w in self.body.winfo_children():w.destroy()
+        for n,b in self.nav.items():b.configure(fg_color=ALT if n==name else "transparent",text_color=CYAN if n==name else TEXT)
         self.title.configure(text=name)
-        self.subtitle.configure(text={"Home":"Latest Horizon build. One click to play.","Instances":"Separate game folders.","Tutorial":"Set up Minecraft and sign in.","Settings":"Launcher preferences."}[name])
-        {"Home":self.home,"Instances":self.instances_page,"Tutorial":self.tutorial,"Settings":self.settings}[name]()
+        self.subtitle.configure(text={"Home":"Your Minecraft library.","Instances":"Manage separate game folders.","Mods":"Browse content for your selected instance.","Settings":"Game files and launcher preferences.","Tutorial":"Complete setup to unlock Jigarzon."}[name])
+        {"Home":self.home,"Instances":self.instances_page,"Mods":self.mods_page,"Settings":self.settings,"Tutorial":self.tutorial}[name]()
 
     def home(self):
-        hero = ctk.CTkFrame(self.body, fg_color="#30363D", corner_radius=14, border_width=1, border_color=BORDER)
-        hero.pack(fill="x", pady=(0, 16))
-        left = ctk.CTkFrame(hero, fg_color="transparent"); left.pack(side="left", fill="both", expand=True, padx=25, pady=24)
-        self.label(left, "HORIZON  /  MINECRAFT JAVA", 10, CYAN, True).pack(anchor="w")
-        self.label(left, "Your next world starts here.", 26, TEXT, True).pack(anchor="w", pady=(7, 4))
-        self.label(left, "Versions, game files and setup. All in one place.", 11, MUTED).pack(anchor="w")
-        self.button(hero, "SETUP GUIDE  →", lambda:self.page("Tutorial"), True, width=145).pack(side="right", padx=24, pady=34)
-        row = ctk.CTkFrame(self.body, fg_color="transparent"); row.pack(fill="x", pady=(0, 15))
-        v, g = self.card(row), self.card(row); v.pack(side="left", fill="both", expand=True, padx=(0, 8)); g.pack(side="left", fill="both", expand=True, padx=(8, 0))
-        self.section(v, "Choose your version", "Browse official Horizon releases and nightly builds."); v.pack_configure(padx=19, pady=18)
-        self.label(v, "Latest Horizon Nightly", 20, TEXT, True).pack(anchor="w", pady=(18, 5))
-        self.label(v, "Jigarzon always installs the newest published build.", 10, MUTED).pack(anchor="w", pady=(0, 12))
-        self.button(v, "INSTALL / UPDATE LATEST", self.install, True, height=42).pack(fill="x")
-        self.section(g, "Minecraft files", "Download the required game files from Mojang."); g.pack_configure(padx=19, pady=18)
-        self.label(g, "Assets  •  libraries  •  Java runtime", 11, TEXT).pack(anchor="w", pady=(18, 12))
-        self.button(g, "DOWNLOAD & PREPARE", self.prepare, True, height=43).pack(fill="x")
-        self.label(g, "Requires a Microsoft account that owns Minecraft: Java Edition.", 9, MUTED, wraplength=420).pack(anchor="w", pady=(8, 0))
-        bottom = ctk.CTkFrame(self.body, fg_color="transparent"); bottom.pack(fill="both", expand=True)
-        play, log = self.card(bottom), self.card(bottom); play.pack(side="left", fill="both", expand=True, padx=(0, 8)); log.pack(side="left", fill="both", expand=True, padx=(8, 0))
-        self.section(play, "Play", "Launch the latest installed Horizon build."); play.pack_configure(padx=19, pady=18)
-        self.label(play, "MAKE IT A GOOD SESSION.", 16, TEXT, True).pack(anchor="w", pady=(18, 4))
-        self.label(play, "Your selected release is saved automatically.", 10, MUTED).pack(anchor="w")
-        self.button(play, "▶  PLAY MINECRAFT", self.play, True, height=47).pack(fill="x", pady=(18, 8))
-        self.button(play, "Microsoft account sign-in", self.signin).pack(fill="x")
-        self.section(log, "Activity", "Live download and launch output.")
-        log.pack_configure(padx=19, pady=18)
-        self.console = ctk.CTkTextbox(log, height=155, corner_radius=13, fg_color="#0C111C", text_color="#C5D0E2", font=("Cascadia Mono", 10), border_width=1, border_color=BORDER)
-        self.console.pack(fill="both", expand=True, pady=(10, 0))
-        self.console.insert("end", "Jigarzon is ready. Checking Horizon…\n")
+        hero=self.card(self.body);hero.pack(fill="x",pady=(0,13))
+        self.label(hero,"JIGARZON  /  MINECRAFT JAVA",9,CYAN,True).pack(anchor="w",padx=21,pady=(17,4))
+        self.label(hero,"Ready for your next world?",22,TEXT,True).pack(anchor="w",padx=21)
+        self.label(hero,"Choose an instance and start playing.",10,MUTED).pack(anchor="w",padx=21,pady=(3,13))
+        row=ctk.CTkFrame(hero,fg_color="transparent");row.pack(fill="x",padx=20,pady=(0,17))
+        self.label(row,"INSTANCE",9,MUTED,True).pack(side="left",padx=(0,9))
+        names=[(x.get("name") or x.get("id") or "Horizon") if isinstance(x,dict) else str(x) for x in self.instances] or ["Horizon"]
+        if self.selected_instance not in names:self.selected_instance=names[0]
+        self.instance_menu=ctk.CTkOptionMenu(row,values=names,variable=tk.StringVar(value=self.selected_instance),command=self.select_instance,fg_color=ALT,button_color=PURPLE,button_hover_color="#7357D5",dropdown_fg_color=PANEL,text_color=TEXT,corner_radius=8,width=220,height=34);self.instance_menu.pack(side="left")
+        self.button(row,"Manage instances",lambda:self.page("Instances")).pack(side="right")
+        play=self.card(self.body);play.pack(fill="x",pady=(0,13))
+        self.label(play,"MINECRAFT JAVA EDITION",9,MUTED,True).pack(anchor="w",padx=21,pady=(16,3))
+        self.label(play,"Horizon Nightly · Latest build",15,TEXT,True).pack(anchor="w",padx=21,pady=(0,12))
+        self.button(play,"▶   PLAY MINECRAFT",self.play,True,height=47).pack(fill="x",padx=21,pady=(0,17))
+        news=self.card(self.body);news.pack(fill="both",expand=True)
+        self.label(news,"NEWS & UPDATES",10,CYAN,True).pack(anchor="w",padx=19,pady=(16,6))
+        self.label(news,"Horizon Nightly",15,TEXT,True).pack(anchor="w",padx=19)
+        self.label(news,"Jigarzon follows the latest published Horizon Nightly. Check release notes for new features and fixes.",10,MUTED,wraplength=760).pack(anchor="w",padx=19,pady=(5,12))
+        self.button(news,"View Horizon release notes",lambda:webbrowser.open("https://github.com/horizon-rust/horizon/releases")).pack(anchor="w",padx=19,pady=(0,15))
 
     def instances_page(self):
-        head = ctk.CTkFrame(self.body, fg_color="transparent"); head.pack(fill="x", pady=(0, 12))
-        self.section(head, "Your instances", "Keep different worlds and configurations separate.")
-        self.button(head, "↻ Load instances", self.load_instances).pack(side="right")
-        self.instance_list = ctk.CTkScrollableFrame(self.body, fg_color=PANEL, corner_radius=18, border_width=1, border_color=BORDER)
-        self.instance_list.pack(fill="both", expand=True)
-        self.button(self.body, "+ Create instance", self.create_instance, True).pack(anchor="w", pady=12)
+        head=ctk.CTkFrame(self.body,fg_color="transparent");head.pack(fill="x",pady=(0,10))
+        self.section(head,"Instances","Each instance keeps its own worlds, settings and mods.")
+        self.button(head,"↻ Refresh",self.load_instances).pack(side="right")
+        self.instance_list=ctk.CTkScrollableFrame(self.body,fg_color=PANEL,corner_radius=11,border_width=1,border_color=BORDER);self.instance_list.pack(fill="both",expand=True)
+        self.button(self.body,"＋ Create instance",self.create_instance,True).pack(anchor="w",pady=11)
+        self.load_instances()
 
     def render_instances(self):
-        if not hasattr(self, "instance_list") or not self.instance_list.winfo_exists(): return
-        for w in self.instance_list.winfo_children(): w.destroy()
-        if not self.instances: self.label(self.instance_list, "No instance data loaded. Press Load instances.", 11, MUTED).pack(anchor="w", padx=15, pady=18)
+        if not hasattr(self,"instance_list") or not self.instance_list.winfo_exists():return
+        for w in self.instance_list.winfo_children():w.destroy()
+        if not self.instances:self.label(self.instance_list,"No instances returned by Horizon.",10,MUTED).pack(anchor="w",padx=14,pady=16)
         for item in self.instances:
-            name = item.get("name") or item.get("id") or "Instance" if isinstance(item, dict) else str(item)
-            folder = (item.get("home") or item.get("game_dir") or "") if isinstance(item, dict) else ""
-            row = ctk.CTkFrame(self.instance_list, fg_color=ALT, corner_radius=13); row.pack(fill="x", padx=9, pady=5)
-            self.label(row, name, 12, TEXT, True).pack(anchor="w", padx=14, pady=(10, 2))
-            if folder: self.label(row, folder, 9, MUTED).pack(anchor="w", padx=14, pady=(0, 10))
+            name=(item.get("name") or item.get("id") or "Instance") if isinstance(item,dict) else str(item)
+            folder=(item.get("home") or item.get("game_dir") or item.get("path") or "") if isinstance(item,dict) else ""
+            row=ctk.CTkFrame(self.instance_list,fg_color=ALT,corner_radius=9,border_width=1,border_color=BORDER);row.pack(fill="x",padx=7,pady=4)
+            self.label(row,name,11,TEXT,True).pack(anchor="w",padx=12,pady=(9,1))
+            if folder:self.label(row,folder,8,MUTED).pack(anchor="w",padx=12,pady=(0,5))
+            actions=ctk.CTkFrame(row,fg_color="transparent");actions.pack(fill="x",padx=8,pady=(2,8))
+            self.button(actions,"Select",lambda n=name:self.select_instance(n),True,height=29,width=72).pack(side="left",padx=3)
+            self.button(actions,"Rename",lambda n=name:self.rename_instance(n),height=29,width=72).pack(side="left",padx=3)
+            self.button(actions,"Reinstall",lambda n=name:self.reinstall_instance(n),height=29,width=80).pack(side="left",padx=3)
+            self.button(actions,"Delete",lambda n=name:self.delete_instance(n),height=29,width=72).pack(side="right",padx=3)
+
+    def load_instances(self):self.command(["instance","list"],"Loading instances",self.instances_done,True)
+    def instances_done(self,out):
+        try:
+            d=json.loads(out);self.instances=d if isinstance(d,list) else d.get("instances",d.get("items",[]));self.render_instances()
+            names=[(x.get("name") or x.get("id") or "Horizon") if isinstance(x,dict) else str(x) for x in self.instances]
+            if hasattr(self,"instance_menu") and self.instance_menu.winfo_exists():self.instance_menu.configure(values=names or ["Horizon"])
+        except Exception:self.log("Could not read instances returned by Horizon.")
+    def select_instance(self,name):
+        self.selected_instance=name;self.save()
+        if hasattr(self,"instance_menu") and self.instance_menu.winfo_exists():self.instance_menu.set(name)
+        self.command(["instance","select",name],"Selecting "+name)
+    def create_instance(self):
+        name=ctk.CTkInputDialog(text="Choose an instance name:",title="Create instance").get_input()
+        if name and name.strip():self.command(["instance","create",name.strip()],"Creating instance",lambda _:self.load_instances())
+    def rename_instance(self,old):
+        new=ctk.CTkInputDialog(text="New instance name:",title="Rename instance").get_input()
+        if new and new.strip() and new.strip()!=old:self.command(["instance","rename",old,new.strip()],"Renaming instance",lambda _:self.load_instances())
+    def delete_instance(self,name):
+        if name.lower()=="horizon":messagebox.showwarning(APP,"The built-in Horizon instance cannot be deleted.");return
+        if messagebox.askyesno(APP,"Delete "+name+"? Its game folder, worlds and packs are moved to the system Trash."):
+            self.command(["instance","delete",name],"Deleting "+name,lambda _:self.load_instances())
+    def reinstall_instance(self,name):
+        if name.lower()=="horizon":messagebox.showwarning(APP,"The built-in Horizon instance cannot be reinstalled this way.");return
+        if not messagebox.askyesno(APP,"Reinstall "+name+"? Its worlds, settings and packs will be moved to the system Trash, then a fresh empty instance will be created."):return
+        self.command(["instance","delete",name],"Removing "+name,lambda _:self.command(["instance","create",name],"Recreating "+name,lambda _:self.load_instances()))
 
     def tutorial(self):
-        intro = self.card(self.body); intro.pack(fill="x", pady=(0, 14))
-        self.label(intro, "GETTING STARTED", 10, CYAN, True).pack(anchor="w", padx=20, pady=(18, 4))
-        self.label(intro, "From first download to first world.", 22, TEXT, True).pack(anchor="w", padx=20)
-        self.label(intro, "Jigarzon fetches the official Horizon package for your Windows architecture.", 10, MUTED).pack(anchor="w", padx=20, pady=(5, 18))
-        steps = [("01","Horizon installs automatically","The official Windows ARM64 or x64 package is downloaded and its SHA-256 digest is checked."),
-                 ("02","Choose a version","Browse Horizon builds and install the version you want."),
-                 ("03","Sign in to Microsoft","Use an account that owns Minecraft: Java Edition."),
-                 ("04","Prepare game files","Horizon downloads and verifies Minecraft assets and libraries from Mojang."),
-                 ("05","Play","Choose your installed build and press Play Minecraft."),
-                 ("06","Organise instances","Create separate game folders for different worlds and setups.")]
-        for n, title, detail in steps:
-            c = self.card(self.body); c.pack(fill="x", pady=5)
-            self.label(c, n, 14, CYAN, True).pack(side="left", padx=17, pady=15)
-            box = ctk.CTkFrame(c, fg_color="transparent"); box.pack(side="left", fill="x", expand=True, pady=11)
-            self.label(box, title, 12, TEXT, True).pack(anchor="w")
-            self.label(box, detail, 10, MUTED, wraplength=800).pack(anchor="w", pady=(3, 0))
+        c=self.card(self.body);c.pack(fill="both",expand=True)
+        self.label(c,"FIRST-TIME SETUP",9,CYAN,True).pack(anchor="w",padx=21,pady=(20,5))
+        self.label(c,"Let's get Minecraft ready.",22,TEXT,True).pack(anchor="w",padx=21)
+        self.label(c,"Complete these steps in order. Jigarzon stays locked until all three are finished.",10,MUTED,wraplength=720).pack(anchor="w",padx=21,pady=(5,16))
+        for n,title,desc,done in [("1","Sign in with Microsoft","Use an account that owns Minecraft: Java Edition.",self.setup_step>=1),("2","Install latest Horizon","Download the newest nightly build.",self.setup_step>=2),("3","Download game files","Fetch and verify required files from Mojang.",self.setup_step>=3)]:
+            r=ctk.CTkFrame(c,fg_color=ALT,corner_radius=9,border_width=1,border_color=BORDER);r.pack(fill="x",padx=17,pady=5)
+            self.label(r,("✓  " if done else n+"  ")+title,11,GREEN if done else TEXT,True).pack(anchor="w",padx=12,pady=(9,2))
+            self.label(r,desc,9,MUTED).pack(anchor="w",padx=12,pady=(0,9))
+        self.setup_action=self.button(c,"SIGN IN WITH MICROSOFT",self.setup_signin,True,height=43);self.setup_action.pack(fill="x",padx=17,pady=(14,8))
+        if self.setup_step==1:self.setup_action.configure(text="INSTALL LATEST HORIZON",command=self.setup_install)
+        elif self.setup_step==2:self.setup_action.configure(text="DOWNLOAD GAME FILES",command=self.setup_prepare)
+        elif self.setup_step>=3:self.setup_action.configure(text="OPEN JIGARZON",command=self.finish_setup)
+        self.label(c,"Your Microsoft password is entered only on Microsoft's own sign-in page.",9,MUTED).pack(anchor="w",padx=19,pady=(2,17))
+    def setup_signin(self):self.command(["account","sign-in"],"Opening Microsoft sign-in",lambda _:self.command(["account"],"Checking Microsoft account",self.account_checked,True))
+    def account_checked(self,out):
+        try:
+            d=json.loads(out);accounts=d if isinstance(d,list) else d.get("accounts",d.get("items",[]))
+            if not accounts:raise ValueError()
+            self.setup_step=1;self.save();self.page("Tutorial")
+        except Exception:messagebox.showwarning(APP,"No signed-in Microsoft account was confirmed. Finish the browser sign-in, then try again.")
+    def setup_install(self):self.command(["install","latest"],"Installing latest Horizon",lambda _:self.setup_installed())
+    def setup_installed(self):self.setup_step=2;self.save();self.page("Tutorial")
+    def setup_prepare(self):self.command(["prepare","--download"],"Downloading and checking Minecraft files",lambda _:self.setup_prepared())
+    def setup_prepared(self):self.setup_step=3;self.save();self.page("Tutorial")
+    def finish_setup(self):self.setup_complete=True;self.save();self.page("Home")
 
+    def mods_page(self):
+        card=self.card(self.body);card.pack(fill="x",pady=(0,10))
+        self.label(card,"MOD BROWSER",9,CYAN,True).pack(anchor="w",padx=15,pady=(12,4))
+        self.label(card,"Search mods for instance: "+self.selected_instance,9,MUTED).pack(anchor="w",padx=15)
+        row=ctk.CTkFrame(card,fg_color="transparent");row.pack(fill="x",padx=13,pady=11)
+        self.mod_query=ctk.CTkEntry(row,placeholder_text="Search mods…",height=36,fg_color=ALT,border_color=BORDER,corner_radius=8);self.mod_query.pack(side="left",fill="x",expand=True,padx=(0,7))
+        self.button(row,"Search",self.search_mods,True,height=36).pack(side="left")
+        self.button(row,"Installed",self.list_mods,height=36).pack(side="left",padx=(7,0))
+        self.mod_list=ctk.CTkScrollableFrame(self.body,fg_color=PANEL,corner_radius=11,border_width=1,border_color=BORDER);self.mod_list.pack(fill="both",expand=True)
+        self.label(self.mod_list,"Search for mods or view installed content.",10,MUTED).pack(anchor="w",padx=13,pady=15)
+    def show_mod_output(self,out,installed=False):
+        if not hasattr(self,"mod_list") or not self.mod_list.winfo_exists():return
+        for w in self.mod_list.winfo_children():w.destroy()
+        try:
+            d=json.loads(out);items=d if isinstance(d,list) else d.get("results",d.get("mods",d.get("items",[])))
+            if not isinstance(items,list):items=[]
+        except Exception:items=[]
+        if not items:self.label(self.mod_list,"No results returned. Check Horizon's response in the activity log.",10,MUTED).pack(anchor="w",padx=13,pady=15);return
+        for item in items:
+            if isinstance(item,dict):
+                name=item.get("name") or item.get("title") or item.get("id") or item.get("slug") or "Mod";slug=item.get("slug") or item.get("id") or item.get("project_id") or name
+                desc=item.get("summary") or item.get("description") or item.get("author") or ""
+            else:name=str(item);slug=name;desc=""
+            r=ctk.CTkFrame(self.mod_list,fg_color=ALT,corner_radius=8,border_width=1,border_color=BORDER);r.pack(fill="x",padx=6,pady=4)
+            self.label(r,name,11,TEXT,True).pack(anchor="w",padx=11,pady=(8,1));self.label(r,str(desc)[:200],9,MUTED,wraplength=730).pack(anchor="w",padx=11,pady=(0,6))
+            if not installed:self.button(r,"Install",lambda ident=str(slug):self.install_mod(ident),True,height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
+    def search_mods(self):
+        q=self.mod_query.get().strip()
+        if q:self.command(["mods","search",q],"Searching mods",lambda out:self.show_mod_output(out),True)
+        else:messagebox.showinfo(APP,"Enter a mod name to search.")
+    def list_mods(self):self.command(["mods","list","--instance",self.selected_instance],"Loading installed mods",lambda out:self.show_mod_output(out,True),True)
+    def install_mod(self,slug):
+        if messagebox.askyesno(APP,"Install "+slug+" into "+self.selected_instance+"?"):self.command(["mods","install",slug,"--instance",self.selected_instance],"Installing "+slug,lambda _:self.list_mods())
     def settings(self):
-        c = self.card(self.body); c.pack(fill="x", pady=(0, 13))
-        self.section(c, "Horizon installation", "Jigarzon downloads and manages the official Horizon launcher.")
-        self.path_label = self.label(c, self.exe.get() or "Horizon is not installed yet.", 10, MUTED, wraplength=800)
-        self.path_label.pack(anchor="w", padx=19, pady=(12, 10))
-        buttons = ctk.CTkFrame(c, fg_color="transparent"); buttons.pack(anchor="w", padx=19, pady=(0, 17))
-        self.button(buttons, "Download / repair Horizon", self.download_horizon, True).pack(side="left")
-        self.button(buttons, "Choose existing EXE", self.browse).pack(side="left", padx=8)
-        about = self.card(self.body); about.pack(fill="x")
-        self.section(about, "About Jigarzon", "An independent desktop launcher for Horizon and Minecraft Java Edition.")
-        self.label(about, "Not affiliated with Mojang Studios or Microsoft.", 10, MUTED).pack(anchor="w", padx=19, pady=15)
+        c=self.card(self.body);c.pack(fill="x",pady=(0,11))
+        self.section(c,"Minecraft game files","Check, download and repair the files required to play.")
+        self.label(c,"Horizon verifies existing downloads and fetches missing or damaged files from Mojang.",9,MUTED).pack(anchor="w",padx=17,pady=(9,11))
+        self.button(c,"CHECK / UPDATE GAME FILES",self.check_gamefiles,True,height=40).pack(anchor="w",padx=17,pady=(0,9))
+        self.button(c,"UPDATE HORIZON TO LATEST",self.update_horizon,height=36).pack(anchor="w",padx=17,pady=(0,15))
+        h=self.card(self.body);h.pack(fill="x",pady=(0,11));self.section(h,"Horizon installation","Manage the official Horizon launcher package.")
+        self.path_label=self.label(h,self.exe.get() or "Horizon is not installed yet.",9,MUTED,wraplength=740);self.path_label.pack(anchor="w",padx=17,pady=(9,9))
+        buttons=ctk.CTkFrame(h,fg_color="transparent");buttons.pack(anchor="w",padx=17,pady=(0,13))
+        self.button(buttons,"Download / repair Horizon",self.download_horizon,True).pack(side="left");self.button(buttons,"Choose existing EXE",self.browse).pack(side="left",padx=7)
+        a=self.card(self.body);a.pack(fill="x");self.section(a,"About Jigarzon","Independent launcher for Horizon and Minecraft Java Edition.")
+        self.label(a,"Not affiliated with Mojang Studios or Microsoft.",9,MUTED).pack(anchor="w",padx=17,pady=12)
+    def check_gamefiles(self):self.command(["prepare","--download"],"Checking and updating Minecraft game files")
+    def update_horizon(self):self.command(["install","latest"],"Updating Horizon to latest")
 
     def connect_startup(self):
         found = locate_horizon()
         if found:
             self.exe.set(str(found)); self.save(); self.log("Horizon launcher found."); self.refresh()
+            if not self.setup_complete:self.page("Tutorial")
         else:
             self.log("Horizon is missing. Downloading the official package…"); self.download_horizon()
 
@@ -333,6 +400,7 @@ class Jigarzon:
     def signin(self): self.command(["account", "sign-in"], "Opening Microsoft sign-in")
 
     def play(self):
+        if not self.setup_complete:self.page("Tutorial");return
         tag = self.version.get().strip()
         if not tag or tag == "latest":
             self.install(); return
@@ -342,7 +410,7 @@ class Jigarzon:
             return
         self.play_version(tag)
 
-    def play_version(self, tag): self.command(["play", "--version", tag], "Playing Minecraft " + tag + " using Jigarzon Launcher")
+    def play_version(self, tag): self.command(["play", "--instance", self.selected_instance], "Playing Minecraft " + tag + " using Jigarzon Launcher")
 
     def load_instances(self): self.command(["instance", "list"], "Loading instances", self.instances_done, True)
     def instances_done(self, out):
