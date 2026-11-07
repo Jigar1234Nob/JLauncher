@@ -6,8 +6,8 @@ import customtkinter as ctk
 
 APP = "Jigarzon Launcher"
 DISCORD_APP_ID = os.getenv("JIGARZON_DISCORD_APP_ID", "").strip()
-BG, SIDE, PANEL, ALT, BORDER = "#090B12", "#0D111B", "#141A28", "#1B2435", "#27334A"
-TEXT, MUTED, PURPLE, CYAN, GREEN = "#F4F6FC", "#91A0B8", "#9875FF", "#62DCE8", "#69D9A4"
+BG, SIDE, PANEL, ALT, BORDER = "#202327", "#191C20", "#292D32", "#343A40", "#454C54"
+TEXT, MUTED, PURPLE, CYAN, GREEN = "#F1F3F5", "#A8B0B8", "#3DAEE9", "#67C7E8", "#69D9A4"
 RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=100"
 ctk.set_appearance_mode("dark")
 
@@ -136,7 +136,7 @@ class Jigarzon:
         self.label(btxt, "JIGARZON", 17, TEXT, True).pack(anchor="w")
         self.label(btxt, "GAME LIBRARY", 9, MUTED, True).pack(anchor="w")
         self.label(side, "WORKSPACE", 9, MUTED, True).pack(anchor="w", padx=21, pady=(0, 10))
-        for name, glyph in [("Home", "⌂"), ("Instances", "▦"), ("Tutorial", "◉"), ("Settings", "⚙")]:
+        for name, glyph in [("Home", "⌂"), ("Instances", "▦"), ("Settings", "⚙")]:
             b = ctk.CTkButton(side, text="   " + glyph + "    " + name, anchor="w", height=46, corner_radius=13,
                 fg_color="transparent", hover_color=ALT, text_color=TEXT, font=("Segoe UI", 12, "bold"),
                 command=lambda n=name: self.page(n))
@@ -167,7 +167,7 @@ class Jigarzon:
         {"Home":self.home,"Instances":self.instances_page,"Tutorial":self.tutorial,"Settings":self.settings}[name]()
 
     def home(self):
-        hero = ctk.CTkFrame(self.body, fg_color="#171B2C", corner_radius=24, border_width=1, border_color="#383454")
+        hero = ctk.CTkFrame(self.body, fg_color="#30363D", corner_radius=14, border_width=1, border_color=BORDER)
         hero.pack(fill="x", pady=(0, 16))
         left = ctk.CTkFrame(hero, fg_color="transparent"); left.pack(side="left", fill="both", expand=True, padx=25, pady=24)
         self.label(left, "HORIZON  /  MINECRAFT JAVA", 10, CYAN, True).pack(anchor="w")
