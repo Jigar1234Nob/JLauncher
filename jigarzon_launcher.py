@@ -704,7 +704,11 @@ class Jigarzon:
                 elif kind == "status": self.status.configure(text="●  " + val[0], text_color=CYAN if val[1] else GREEN)
                 elif kind == "progress": self.status.configure(text="●  " + val, text_color=CYAN)
                 elif kind == "horizon":
-                    self.busy = False; self.exe.set(val); self.save(); self.log("Horizon installed: " + val); self.set_status("Horizon connected")
+                    self.busy = False; self.exe.set(val)
+                    # A fresh Horizon install/repair must repeat the guided setup flow.
+                    self.setup_complete = False; self.setup_step = 0
+                    self.save(); self.page("Tutorial")
+                    self.log("Horizon installed: " + val); self.set_status("Horizon connected")
                     if hasattr(self, "path_label") and self.path_label.winfo_exists(): self.path_label.configure(text=val)
                     self.refresh()
                 elif kind == "download_error":
