@@ -7,7 +7,7 @@ import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 APP = "Jigarzon Launcher"
-APP_VERSION = "1.0.0"
+APP_VERSION = os.getenv("JIGARZON_BUILD_VERSION", "1.0.0")
 APP_RELEASES = "https://api.github.com/repos/Jigar1234Nob/jigarzon-launcher/releases/latest"
 HORIZON_README = "https://raw.githubusercontent.com/horizon-rust/horizon/main/README.md"
 DISCORD_APP_ID = os.getenv("JIGARZON_DISCORD_APP_ID", "").strip()
@@ -445,7 +445,7 @@ class Jigarzon:
             try:
                 req=urllib.request.Request(HORIZON_README,headers={"User-Agent":"Jigarzon-Launcher"})
                 with urllib.request.urlopen(req,timeout=12) as response: body=response.read().decode("utf-8","replace")
-                match=re.search(r"Minecraft: Java Edition\\s+(\\d+\\.\\d+)",body)
+                match=re.search(r"Minecraft: Java Edition\s+(\d+\.\d+)",body)
                 if match:self.jobs.put(("game_version",match.group(1)))
             except Exception as e:self.jobs.put(("log","Could not check the current Minecraft version: "+str(e)))
         threading.Thread(target=work,daemon=True).start()
@@ -457,7 +457,7 @@ class Jigarzon:
                 with urllib.request.urlopen(req,timeout=15) as response: release=json.loads(response.read().decode("utf-8"))
                 tag=str(release.get("tag_name","")).lstrip("v")
                 def version_tuple(v):
-                    found=re.findall(r"\\d+",v)
+                    found=re.findall(r"\d+",v)
                     return tuple(int(x) for x in found[:3]) if found else (0,)
                 if version_tuple(tag)<=version_tuple(APP_VERSION):return
                 asset=next((a for a in release.get("assets",[]) if a.get("name")=="Jigarzon-Setup.exe"),None)
