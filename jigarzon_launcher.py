@@ -174,7 +174,7 @@ class Jigarzon:
         self.title=self.label(left,"Home",23,TEXT,True);self.title.pack(anchor="w",pady=(4,0))
         self.subtitle=self.label(left,"Your Minecraft library.",10,MUTED);self.subtitle.pack(anchor="w")
         self.button(header,"↻ Refresh",self.refresh).pack(side="right",pady=9)
-        self.body=ctk.CTkFrame(main,fg_color="transparent");self.body.pack(fill="both",expand=True,padx=27,pady=(0,18))
+        self.body=ctk.CTkScrollableFrame(main,fg_color="transparent",corner_radius=0);self.body.pack(fill="both",expand=True,padx=27,pady=(0,18))
         self.page("Home")
 
     def section(self, p, title, sub=""):
