@@ -1,9 +1,12 @@
 # Jigarzon Launcher
 
-Jigarzon Launcher is a modern Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+Jigarzon Launcher is a simple Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
 
-It automatically downloads the official Horizon launcher package for your Windows architecture, then lets you browse and install Horizon builds, prepare Minecraft game files, manage instances, and launch the version you want. The interface includes a startup screen, rounded desktop controls, a built-in setup guide, and optional Discord Rich Presence.
+- Installs or updates the latest Horizon Nightly build.
+- Prepares Minecraft files and launches the game.
+- Starts Microsoft sign-in automatically when Horizon reports that no eligible account is signed in.
+- Includes a Prism-inspired dark interface and optional Discord Rich Presence.
 
-A Microsoft account that owns Minecraft: Java Edition is required to sign in and prepare game files. Minecraft assets are downloaded from Mojang through Horizon and are not bundled with Jigarzon.
+A Microsoft account that owns Minecraft: Java Edition is required. Minecraft assets are downloaded from Mojang through Horizon and are not bundled with Jigarzon.
 
-Jigarzon Launcher is an independent project and is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios and Microsoft.
+Jigarzon is an independent project and is not affiliated with Mojang Studios or Microsoft.
