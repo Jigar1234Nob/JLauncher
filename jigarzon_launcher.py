@@ -101,7 +101,7 @@ class Jigarzon:
         self.root.configure(fg_color=BG)
         saved = settings()
         self.exe = tk.StringVar(value=saved.get("horizon_path", ""))
-        self.version = tk.StringVar(value=saved.get("version", ""))
+        self.version = tk.StringVar(value=saved.get("version", "latest"))
         self.signin_pending = False
         self.installed, self.available, self.instances = [], [], []
         self.rpc, self.game_active = None, False
@@ -331,7 +331,8 @@ class Jigarzon:
 
     def play(self):
         tag = self.version.get().strip()
-        if not tag: messagebox.showinfo(APP, "Choose a Horizon version first."); return
+        if not tag or tag == "latest":
+            self.install(); return
         if tag not in self.installed:
             if messagebox.askyesno(APP, tag + " is not installed. Install it now?"):
                 self.command(["install", tag], "Installing Horizon " + tag, lambda _: self.play_version(tag))
@@ -408,7 +409,6 @@ class Jigarzon:
                     else:
                         if label == "Opening Microsoft sign-in": self.signin_pending = False
                         self.set_status(label + " failed")
-                        if out: self.log(out)
         except queue.Empty: pass
         self.root.after(120, self.poll)
 
