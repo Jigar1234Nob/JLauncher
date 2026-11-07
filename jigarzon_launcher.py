@@ -130,12 +130,22 @@ class Jigarzon:
     def card(self, p):
         return ctk.CTkFrame(p, fg_color=PANEL, corner_radius=12, border_width=1, border_color=BORDER)
 
+    def logo_mark(self, parent, size=44, background=SIDE):
+        canvas=tk.Canvas(parent,width=size,height=size,bg=background,highlightthickness=0,bd=0)
+        k=size/100
+        def poly(points,fill):
+            canvas.create_polygon(*[v*k for v in points],fill=fill,outline=fill)
+        poly([10,34,52,7,52,76,30,94,7,94,30,75,30,35], "#A33BFF")
+        poly([58,17,82,34,82,75,100,75,83,94,58,94], "#16BFEA")
+        poly([52,7,58,17,58,94,52,88], "#5638E8")
+        return canvas
+
     def build(self):
         shell=ctk.CTkFrame(self.root,fg_color=BG,corner_radius=0);shell.pack(fill="both",expand=True)
         side=ctk.CTkFrame(shell,width=215,fg_color=SIDE,corner_radius=0);side.pack(side="left",fill="y");side.pack_propagate(False)
         brand=ctk.CTkFrame(side,fg_color="transparent");brand.pack(fill="x",padx=19,pady=(25,32))
-        logo=ctk.CTkFrame(brand,width=44,height=44,corner_radius=12,fg_color=PURPLE);logo.pack(side="left",padx=(0,10));logo.pack_propagate(False)
-        self.label(logo,"J",24,"white",True,anchor="center").pack(expand=True)
+        logo=ctk.CTkFrame(brand,width=44,height=44,corner_radius=10,fg_color=SIDE);logo.pack(side="left",padx=(0,10));logo.pack_propagate(False)
+        self.logo_mark(logo,44,SIDE).pack()
         b=ctk.CTkFrame(brand,fg_color="transparent");b.pack(side="left")
         self.label(b,"JIGARZON",16,TEXT,True).pack(anchor="w");self.label(b,"MINECRAFT LAUNCHER",8,MUTED,True).pack(anchor="w")
         self.label(side,"LIBRARY",9,MUTED,True).pack(anchor="w",padx=19,pady=(0,8))
@@ -252,7 +262,7 @@ class Jigarzon:
         self.command(["instance","delete",name],"Removing "+name,recreate)
 
     def tutorial(self):
-        c=self.card(self.body);c.pack(fill="both",expand=True)
+        c=self.card(self.body);c.pack(fill="x",pady=(0,10))
         self.label(c,"FIRST-TIME SETUP",9,CYAN,True).pack(anchor="w",padx=21,pady=(20,5))
         self.label(c,"Let's get Minecraft ready.",22,TEXT,True).pack(anchor="w",padx=21)
         self.label(c,"Complete these steps in order. Jigarzon stays locked until all three are finished.",10,MUTED,wraplength=720).pack(anchor="w",padx=21,pady=(5,16))
@@ -265,6 +275,13 @@ class Jigarzon:
         elif self.setup_step==2:self.setup_action.configure(text="DOWNLOAD GAME FILES",command=self.setup_prepare)
         elif self.setup_step>=3:self.setup_action.configure(text="OPEN JIGARZON",command=self.finish_setup)
         self.label(c,"Your Microsoft password is entered only on Microsoft's own sign-in page.",9,MUTED).pack(anchor="w",padx=19,pady=(2,17))
+        logs=self.card(self.body);logs.pack(fill="both",expand=True)
+        self.section(logs,"Activity log","Live setup output and troubleshooting details.")
+        self.console=ctk.CTkTextbox(logs,height=170,fg_color=ALT,text_color=TEXT,
+                                   border_width=0,corner_radius=8,font=("Consolas",9),wrap="word")
+        self.console.pack(fill="both",expand=True,padx=12,pady=(10,12))
+        self.console.insert("end","Jigarzon Launcher activity log ready.\\n")
+        self.console.configure(state="disabled")
     def setup_signin(self):
         self.signin_window = None
         self.command(["account","sign-in"],"Opening Microsoft sign-in",lambda _:self.command(["account"],"Checking Microsoft account",self.account_checked,True))
@@ -528,8 +545,11 @@ def main():
     splash.overrideredirect(True); splash.configure(fg_color=BG); splash.update_idletasks()
     x=(splash.winfo_screenwidth()-520)//2; y=(splash.winfo_screenheight()-330)//2; splash.geometry(f"520x330+{x}+{y}")
     frame=ctk.CTkFrame(splash, fg_color=PANEL, corner_radius=16, border_width=1, border_color=BORDER); frame.pack(fill="both", expand=True, padx=2, pady=2)
-    logo=ctk.CTkFrame(frame, width=60, height=60, corner_radius=19, fg_color=PURPLE); logo.pack(pady=(35, 12)); logo.pack_propagate(False)
-    ctk.CTkLabel(logo, text="J", font=("Segoe UI", 31, "bold"), text_color="white").pack(expand=True)
+    logo=ctk.CTkFrame(frame, width=64, height=64, corner_radius=14, fg_color=BG); logo.pack(pady=(31, 12)); logo.pack_propagate(False)
+    app_logo=tk.Canvas(logo,width=64,height=64,bg=BG,highlightthickness=0,bd=0); app_logo.pack()
+    app_logo.create_polygon(6,22,33,4,33,49,19,61,4,61,19,48,19,23,fill="#A33BFF",outline="#A33BFF")
+    app_logo.create_polygon(37,11,53,22,53,48,64,48,53,61,37,61,fill="#16BFEA",outline="#16BFEA")
+    app_logo.create_polygon(33,4,37,11,37,61,33,57,fill="#5638E8",outline="#5638E8")
     ctk.CTkLabel(frame, text="JIGARZON", font=("Segoe UI", 24, "bold"), text_color=TEXT).pack()
     ctk.CTkLabel(frame, text="A better way into your next world.", font=("Segoe UI", 11), text_color=MUTED).pack(pady=(3, 24))
     bar=ctk.CTkProgressBar(frame, width=390, height=8, corner_radius=8, progress_color=PURPLE, fg_color=ALT); bar.pack(pady=(0, 13)); bar.set(.04)
