@@ -380,6 +380,7 @@ class Jigarzon:
     def releases_done(self, out):
         try: self.available = tags(json.loads(out)); self.update_versions()
         except Exception: self.log("Could not read Horizon releases.")
+        self.load_instances()
 
     def update_versions(self):
         choices = list(dict.fromkeys(self.installed + self.available))
