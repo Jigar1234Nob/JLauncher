@@ -40,7 +40,7 @@ def install_horizon(progress):
     with urllib.request.urlopen(req, timeout=30) as r: releases = json.loads(r.read().decode())
     release = next((r for r in releases if str(r.get("tag_name", "")).startswith("launcher@")), None)
     if not release: raise RuntimeError("No official Horizon launcher release was found.")
-    arm = platform.machine().lower() in ("arm64", "aarch64") or os.getenv("PROCESSOR_ARCHITECTURE", "").upper() == "ARM64"
+    arm = (platform.machine().lower() in ("arm64", "aarch64") or os.getenv("PROCESSOR_ARCHITECTURE", "").upper() == "ARM64" or os.getenv("PROCESSOR_ARCHITEW6432", "").upper() == "ARM64")
     filename = "horizon-launcher-windows-arm64.zip" if arm else "horizon-launcher-windows-x64.zip"
     asset = next((a for a in release.get("assets", []) if a.get("name") == filename), None)
     if not asset: raise RuntimeError("The official release is missing " + filename)
