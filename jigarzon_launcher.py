@@ -1,4 +1,4 @@
-import hashlib, json, os, platform, queue, subprocess, threading, urllib.request, zipfile
+import hashlib, json, os, platform, queue, re, subprocess, threading, urllib.request, zipfile
 from pathlib import Path
 import tkinter as tk
 import webbrowser
@@ -265,7 +265,32 @@ class Jigarzon:
         elif self.setup_step==2:self.setup_action.configure(text="DOWNLOAD GAME FILES",command=self.setup_prepare)
         elif self.setup_step>=3:self.setup_action.configure(text="OPEN JIGARZON",command=self.finish_setup)
         self.label(c,"Your Microsoft password is entered only on Microsoft's own sign-in page.",9,MUTED).pack(anchor="w",padx=19,pady=(2,17))
-    def setup_signin(self):self.command(["account","sign-in"],"Opening Microsoft sign-in",lambda _:self.command(["account"],"Checking Microsoft account",self.account_checked,True))
+    def setup_signin(self):
+        self.signin_window = None
+        self.command(["account","sign-in"],"Opening Microsoft sign-in",lambda _:self.command(["account"],"Checking Microsoft account",self.account_checked,True))
+
+    def show_signin_code(self, code):
+        if getattr(self, "signin_window", None) is not None:
+            try:
+                if self.signin_window.winfo_exists():
+                    self.signin_code_label.configure(text=code)
+                    self.signin_window.lift()
+                    return
+            except Exception: pass
+        win=ctk.CTkToplevel(self.root); self.signin_window=win
+        win.title("Microsoft sign-in"); win.geometry("430x270"); win.resizable(False,False)
+        win.transient(self.root); win.grab_set()
+        c=ctk.CTkFrame(win,fg_color=PANEL,corner_radius=14); c.pack(fill="both",expand=True,padx=14,pady=14)
+        self.label(c,"MICROSOFT ACCOUNT",10,CYAN,True).pack(anchor="w",padx=18,pady=(18,5))
+        self.label(c,"Enter this code",20,TEXT,True).pack(anchor="w",padx=18)
+        self.signin_code_label=self.label(c,code,30,TEXT,True)
+        self.signin_code_label.pack(anchor="w",padx=18,pady=(8,5))
+        self.label(c,"Open microsoft.com/link and enter the code above.",10,MUTED).pack(anchor="w",padx=18,pady=(0,14))
+        row=ctk.CTkFrame(c,fg_color="transparent"); row.pack(fill="x",padx=18,pady=(0,16))
+        self.button(row,"COPY CODE",lambda: (self.root.clipboard_clear(),self.root.clipboard_append(self.signin_code_label.cget("text"))),True).pack(side="left")
+        self.button(row,"OPEN MICROSOFT",lambda:webbrowser.open("https://www.microsoft.com/link")).pack(side="left",padx=8)
+        win.protocol("WM_DELETE_WINDOW",win.destroy)
+
     def account_checked(self,out):
         try:
             d=json.loads(out);accounts=d if isinstance(d,list) else d.get("accounts",d.get("items",[]))
@@ -380,8 +405,12 @@ class Jigarzon:
                     self.game_active = True; self.jobs.put(("discord", version))
                 lines = []
                 for line in proc.stdout:
-                    lines.append(line.rstrip())
-                    if line.strip(): self.jobs.put(("log", line.rstrip()))
+                    clean=line.rstrip()
+                    lines.append(clean)
+                    if clean: self.jobs.put(("log", clean))
+                    if label == "Opening Microsoft sign-in":
+                        match=re.search(r"(?i)\\b(?:user\\s*)?code\\b\\s*[:=]?\\s*([A-Z0-9-]{6,})", clean)
+                        if match:self.jobs.put(("signin_code", match.group(1).strip("-")))
                 self.jobs.put(("result", (proc.wait(), "\n".join(lines), label, callback, json_output)))
             except Exception as e: self.jobs.put(("result", (1, str(e), label, None, False)))
         threading.Thread(target=work, daemon=True).start()
@@ -470,6 +499,7 @@ class Jigarzon:
                     self.busy = False; self.set_status("Horizon setup failed")
                     messagebox.showerror(APP, "Could not download Horizon:\n\n" + val + "\n\nRetry from Settings.")
                 elif kind == "discord": self.discord_start(val)
+                elif kind == "signin_code": self.show_signin_code(val)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
                     if label.startswith("Playing Minecraft "):
@@ -484,7 +514,10 @@ class Jigarzon:
                         self.set_status(label + " complete")
                         if callback: callback(out)
                     else:
-                        if label == "Opening Microsoft sign-in": self.signin_pending = False
+                        if label == "Opening Microsoft sign-in":
+                            self.signin_pending = False
+                            details=out.strip() or "Horizon did not return a Microsoft device code."
+                            messagebox.showerror(APP,"Microsoft sign-in could not start.\n\n"+details+"\n\nIf the message says the sign-in app is not configured, the Horizon build needs its Microsoft client ID.")
                         self.set_status(label + " failed")
         except queue.Empty: pass
         self.root.after(120, self.poll)
