@@ -37,19 +37,24 @@ def extract_tags(data):
     found = []
     def walk(value):
         if isinstance(value, str):
-            if value and (value.startswith("v") or value.lower() in ("nightly", "latest")):
+            if value:
                 found.append(value)
         elif isinstance(value, list):
             for item in value:
-                walk(item)
-        elif isinstance(value, dict):
-            for key in ("tag", "version", "name", "release", "id"):
-                item = value.get(key)
-                if isinstance(item, str):
+                if isinstance(item, dict):
+                    if item.get("available_here", True) is not False:
+                        tag = item.get("tag") or item.get("version")
+                        if isinstance(tag, str) and tag:
+                            found.append(tag)
+                elif isinstance(item, str) and item:
                     found.append(item)
-            for key in ("versions", "releases", "installed", "items", "data"):
+        elif isinstance(value, dict):
+            for key in ("installed", "versions", "releases", "items", "data"):
                 if key in value:
                     walk(value[key])
+            selected = value.get("selected")
+            if isinstance(selected, str) and selected:
+                found.append(selected)
     walk(data)
     result = []
     for item in found:
@@ -152,8 +157,8 @@ class Jigarzon:
         self.status_dot = tk.Label(self.sidebar, text="●", bg=SIDEBAR, fg=RED,
                                    font=("Segoe UI", 10))
         self.status_dot.pack(anchor="w", padx=20, pady=(10, 2))
-        self.label(self.sidebar, "Rust client", 9, TEXT, True).pack(anchor="w", padx=37)
-        self.label(self.sidebar, "Not connected", 8, MUTED).pack(anchor="w", padx=37)
+        self.status_label = self.label(self.sidebar, "Not connected", 8, MUTED)
+        self.status_label.pack(anchor="w", padx=37)
         self.label(self.sidebar, "JIGARZON  /  1.0", 7, "#56627a", True).pack(side="bottom", anchor="w", padx=20, pady=18)
 
         content = tk.Frame(shell, bg=BG)
@@ -455,7 +460,11 @@ class Jigarzon:
     def prepare_download(self):
         if not messagebox.askyesno(APP, "Horizon will prepare Minecraft files from your installation or download the required Mojang files. You must be signed in with an account that owns Minecraft: Java Edition. Continue?"):
             return
-        self.run_command(["prepare", "--download"], "Downloading and preparing Minecraft game files")
+        tag = self.selected_version.get().strip()
+        args = ["prepare", "--download"]
+        if tag:
+            args += ["--version", tag]
+        self.run_command(args, f"Downloading and preparing Minecraft files for {tag or 'the selected build'}")
 
     def signin(self):
         self.run_command(["account", "sign-in"], "Opening Microsoft sign-in")
@@ -516,6 +525,7 @@ class Jigarzon:
                     message, active = value
                     self.status.set(message)
                     self.status_dot.configure(fg=CYAN if active else GREEN)
+                    self.status_label.configure(text=message[:30])
                 elif kind == "result":
                     code, output, label, callback, is_json = value
                     self.busy = False
