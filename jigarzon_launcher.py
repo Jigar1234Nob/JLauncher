@@ -407,15 +407,6 @@ class Jigarzon:
         self.command(["play", "--instance", self.selected_instance],
                      "Playing Minecraft latest using Jigarzon Launcher")
 
-    def load_instances(self): self.command(["instance", "list"], "Loading instances", self.instances_done, True)
-    def instances_done(self, out):
-        try:
-            d = json.loads(out); self.instances = d if isinstance(d, list) else d.get("instances", d.get("items", [])); self.render_instances()
-        except Exception: self.log("Could not read instances.")
-    def create_instance(self):
-        name = ctk.CTkInputDialog(text="Name your new instance:", title="Create instance").get_input()
-        if name and name.strip(): self.command(["instance", "create", name.strip()], "Creating instance", lambda _: self.load_instances())
-
     def discord_start(self, version):
         appid = DISCORD_APP_ID
         if not appid: self.log("Discord Rich Presence is waiting for the Jigarzon Discord Application ID to be configured in the build."); return
