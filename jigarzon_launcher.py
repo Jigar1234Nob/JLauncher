@@ -186,7 +186,7 @@ class Jigarzon:
         for w in self.body.winfo_children():w.destroy()
         for n,b in self.nav.items():b.configure(fg_color=ALT if n==name else "transparent",text_color=CYAN if n==name else TEXT)
         self.title.configure(text=name)
-        self.subtitle.configure(text={"Home":"Your Minecraft library.","Instances":"Manage separate game folders.","Mods":"Browse content for your selected instance.","Settings":"Game files and launcher preferences.","Tutorial":"Complete setup to unlock Jigarzon."}[name])
+        self.subtitle.configure(text={"Home":"Your Minecraft library.","Instances":"Manage separate game folders.","Mods":"Browse content for your selected instance.","Settings":"Game files and launcher preferences.","Tutorial":"Complete setup to unlock Jigarzon.","Dev Gallery":"Developer diagnostics and Horizon commands."}[name])
         {"Home":self.home,"Instances":self.instances_page,"Mods":self.mods_page,"Settings":self.settings,"Tutorial":self.tutorial,"Dev Gallery":self.dev_gallery}[name]()
 
     def home(self):
