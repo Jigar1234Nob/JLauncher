@@ -299,7 +299,7 @@ class Jigarzon:
         for item in self.instances:
             if isinstance(item, dict):
                 name = item.get("name") or item.get("id") or str(item)
-                folder = item.get("game_dir") or item.get("directory") or ""
+                folder = item.get("home") or item.get("game_dir") or item.get("directory") or ""
                 active = "  ★ ACTIVE" if item.get("selected") or item.get("active") else ""
                 self.instance_list.insert("end", f"  {name}{active}    {folder}")
             else:
@@ -481,9 +481,8 @@ class Jigarzon:
         self.select_version_then_play(tag)
 
     def select_version_then_play(self, tag):
-        self.run_command(["settings", "selected-version", tag],
-                         f"Selecting Horizon {tag}",
-                         lambda output: self.run_command(["play"], f"Playing Minecraft {tag} using Jigarzon Launcher"))
+        self.run_command(["play", "--version", tag],
+                         f"Playing Minecraft {tag} using Jigarzon Launcher")
 
     def load_instances(self):
         self.run_command(["instance", "list"], "Loading instances", self.on_instances, True)
