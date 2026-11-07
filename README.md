@@ -15,6 +15,8 @@ Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Mine
 - Instance manager to create, select, rename, reinstall and delete instances.
 - Mod browser for Horizon-compatible content.
 - Open the selected instance's Horizon mods folder.
+- Optional Stats for Nerds developer gallery with live application logs and Horizon CLI access.
+- In-app reinstall and uninstall controls, including a choice to preserve Horizon and Minecraft files.
 - Drag and drop Horizon `.mrpack` or supported modpack `.zip` files to import them.
 
 ## Mods and compatibility
