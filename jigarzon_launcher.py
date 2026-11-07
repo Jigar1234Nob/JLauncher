@@ -217,7 +217,13 @@ class Jigarzon:
         try:
             d=json.loads(out);self.instances=d if isinstance(d,list) else d.get("instances",d.get("items",[]));self.render_instances()
             names=[(x.get("name") or x.get("id") or "Horizon") if isinstance(x,dict) else str(x) for x in self.instances]
-            if hasattr(self,"instance_menu") and self.instance_menu.winfo_exists():self.instance_menu.configure(values=names or ["Horizon"])
+            if names and self.selected_instance not in names:
+                self.selected_instance=names[0]
+                self.save()
+                self.command(["instance","select",self.selected_instance],"Selecting "+self.selected_instance)
+            if hasattr(self,"instance_menu") and self.instance_menu.winfo_exists():
+                self.instance_menu.configure(values=names or ["Horizon"])
+                self.instance_menu.set(self.selected_instance)
         except Exception:self.log("Could not read instances returned by Horizon.")
     def select_instance(self,name):
         self.selected_instance=name;self.save()
@@ -228,7 +234,11 @@ class Jigarzon:
         if name and name.strip():self.command(["instance","create",name.strip()],"Creating instance",lambda _:self.load_instances())
     def rename_instance(self,old):
         new=ctk.CTkInputDialog(text="New instance name:",title="Rename instance").get_input()
-        if new and new.strip() and new.strip()!=old:self.command(["instance","rename",old,new.strip()],"Renaming instance",lambda _:self.load_instances())
+        if new and new.strip() and new.strip()!=old:
+            def renamed(_):
+                if self.selected_instance==old:self.selected_instance=new.strip();self.save()
+                self.load_instances()
+            self.command(["instance","rename",old,new.strip()],"Renaming instance",renamed)
     def delete_instance(self,name):
         if name.lower()=="horizon":messagebox.showwarning(APP,"The built-in Horizon instance cannot be deleted.");return
         if messagebox.askyesno(APP,"Delete "+name+"? Its game folder, worlds and packs are moved to the system Trash."):
@@ -236,7 +246,10 @@ class Jigarzon:
     def reinstall_instance(self,name):
         if name.lower()=="horizon":messagebox.showwarning(APP,"The built-in Horizon instance cannot be reinstalled this way.");return
         if not messagebox.askyesno(APP,"Reinstall "+name+"? Its worlds, settings and packs will be moved to the system Trash, then a fresh empty instance will be created."):return
-        self.command(["instance","delete",name],"Removing "+name,lambda _:self.command(["instance","create",name],"Recreating "+name,lambda _:self.load_instances()))
+        def recreate(_):
+            self.command(["instance","create",name],"Recreating "+name,
+                lambda __:self.command(["instance","select",name],"Selecting "+name,lambda ___:self.load_instances()))
+        self.command(["instance","delete",name],"Removing "+name,recreate)
 
     def tutorial(self):
         c=self.card(self.body);c.pack(fill="both",expand=True)
@@ -290,14 +303,21 @@ class Jigarzon:
             else:name=str(item);slug=name;desc=""
             r=ctk.CTkFrame(self.mod_list,fg_color=ALT,corner_radius=8,border_width=1,border_color=BORDER);r.pack(fill="x",padx=6,pady=4)
             self.label(r,name,11,TEXT,True).pack(anchor="w",padx=11,pady=(8,1));self.label(r,str(desc)[:200],9,MUTED,wraplength=730).pack(anchor="w",padx=11,pady=(0,6))
-            if not installed:self.button(r,"Install",lambda ident=str(slug):self.install_mod(ident),True,height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
+            if not installed:
+                self.button(r,"Install",lambda ident=str(slug):self.install_mod(ident),True,height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
+            else:
+                self.button(r,"Remove",lambda ident=str(slug):self.remove_mod(ident),height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
     def search_mods(self):
         q=self.mod_query.get().strip()
         if q:self.command(["mods","search",q],"Searching mods",lambda out:self.show_mod_output(out),True)
         else:messagebox.showinfo(APP,"Enter a mod name to search.")
     def list_mods(self):self.command(["mods","list","--instance",self.selected_instance],"Loading installed mods",lambda out:self.show_mod_output(out,True),True)
     def install_mod(self,slug):
-        if messagebox.askyesno(APP,"Install "+slug+" into "+self.selected_instance+"?"):self.command(["mods","install",slug,"--instance",self.selected_instance],"Installing "+slug,lambda _:self.list_mods())
+        if messagebox.askyesno(APP,"Install "+slug+" into "+self.selected_instance+"?"):
+            self.command(["mods","install",slug,"--instance",self.selected_instance],"Installing "+slug,lambda _:self.list_mods())
+    def remove_mod(self,slug):
+        if messagebox.askyesno(APP,"Remove "+slug+" from "+self.selected_instance+"?"):
+            self.command(["mods","remove",slug,"--instance",self.selected_instance],"Removing "+slug,lambda _:self.list_mods())
     def settings(self):
         c=self.card(self.body);c.pack(fill="x",pady=(0,11))
         self.section(c,"Minecraft game files","Check, download and repair the files required to play.")
