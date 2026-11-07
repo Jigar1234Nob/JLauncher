@@ -40,7 +40,15 @@ jobs:
           --collect-all tkinterdnd2 jigarzon_launcher.py
       - name: Build Inno Setup installer
         shell: pwsh
-        run: '& "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" /DAppVersion="$env:JIGARZON_BUILD_VERSION" installer.iss'
+        run: |
+          $inno = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $inno)) {
+            throw "Inno Setup compiler not found: $inno"
+          }
+          & $inno "/DAppVersion=$env:JIGARZON_BUILD_VERSION" "installer.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup compilation failed with exit code $LASTEXITCODE"
+          }
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
