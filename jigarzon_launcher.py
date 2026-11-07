@@ -115,6 +115,8 @@ class Jigarzon:
         self.selected_instance = saved.get("selected_instance", "Horizon")
         self.setup_complete = bool(saved.get("setup_complete", False))
         self.setup_step = int(saved.get("setup_step", 0))
+        self.stats_enabled = bool(saved.get("stats_for_nerds", False))
+        self.log_history = []
         self.rpc, self.game_active = None, False
         self.minecraft_version = "26.3"
         self.nav = {}
@@ -125,7 +127,7 @@ class Jigarzon:
         self.root.after(1000, self.check_horizon_game_version)
 
     def save(self):
-        save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "selected_instance": self.selected_instance, "setup_complete": self.setup_complete, "setup_step": self.setup_step})
+        save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "selected_instance": self.selected_instance, "setup_complete": self.setup_complete, "setup_step": self.setup_step, "stats_for_nerds": self.stats_enabled})
 
     def label(self, p, text, size=11, color=TEXT, bold=False, **kw):
         return ctk.CTkLabel(p, text=text, text_color=color, font=("Segoe UI", size, "bold" if bold else "normal"),
@@ -185,7 +187,7 @@ class Jigarzon:
         for n,b in self.nav.items():b.configure(fg_color=ALT if n==name else "transparent",text_color=CYAN if n==name else TEXT)
         self.title.configure(text=name)
         self.subtitle.configure(text={"Home":"Your Minecraft library.","Instances":"Manage separate game folders.","Mods":"Browse content for your selected instance.","Settings":"Game files and launcher preferences.","Tutorial":"Complete setup to unlock Jigarzon."}[name])
-        {"Home":self.home,"Instances":self.instances_page,"Mods":self.mods_page,"Settings":self.settings,"Tutorial":self.tutorial}[name]()
+        {"Home":self.home,"Instances":self.instances_page,"Mods":self.mods_page,"Settings":self.settings,"Tutorial":self.tutorial,"Dev Gallery":self.dev_gallery}[name]()
 
     def home(self):
         hero=self.card(self.body);hero.pack(fill="x",pady=(0,13))
@@ -428,6 +430,85 @@ class Jigarzon:
         self.button(buttons,"Download / repair Horizon",self.download_horizon,True).pack(side="left");self.button(buttons,"Choose existing EXE",self.browse).pack(side="left",padx=7)
         a=self.card(self.body);a.pack(fill="x");self.section(a,"About Jigarzon","Independent launcher for Horizon and Minecraft Java Edition.")
         self.label(a,"Not affiliated with Mojang Studios or Microsoft.",9,MUTED).pack(anchor="w",padx=17,pady=12)
+        tools=self.card(self.body);tools.pack(fill="x",pady=(11,0))
+        self.section(tools,"Developer options","Advanced diagnostics and direct Horizon CLI access.")
+        self.stats_var=tk.BooleanVar(value=self.stats_enabled)
+        ctk.CTkSwitch(tools,text="Stats for Nerds",variable=self.stats_var,command=self.toggle_stats,
+                      progress_color=PURPLE,button_color=CYAN,button_hover_color=CYAN,
+                      text_color=TEXT,font=("Segoe UI",10)).pack(anchor="w",padx=17,pady=(10,7))
+        self.dev_gallery_button=self.button(tools,"OPEN DEV GALLERY  →",lambda:self.page("Dev Gallery"),height=34)
+        if self.stats_enabled:self.dev_gallery_button.pack(anchor="w",padx=17,pady=(0,13))
+        un=self.card(self.body);un.pack(fill="x",pady=(11,0))
+        self.section(un,"Uninstall / reinstall Jigarzon","Remove the launcher without accidentally deleting your Minecraft worlds.")
+        self.label(un,"Your Horizon installation and game data are stored separately from the launcher. You can keep them when uninstalling.",9,MUTED,wraplength=740).pack(anchor="w",padx=17,pady=(8,10))
+        ur=ctk.CTkFrame(un,fg_color="transparent");ur.pack(anchor="w",padx=17,pady=(0,13))
+        self.button(ur,"REINSTALL JIGARZON",self.reinstall_jigarzon,True,height=36).pack(side="left")
+        self.button(ur,"UNINSTALL JIGARZON",self.uninstall_jigarzon,height=36).pack(side="left",padx=8)
+    def toggle_stats(self):
+        self.stats_enabled=bool(self.stats_var.get());self.save()
+        if self.stats_enabled:self.dev_gallery_button.pack(anchor="w",padx=17,pady=(0,13))
+        else:self.dev_gallery_button.pack_forget()
+        self.log("Stats for Nerds enabled." if self.stats_enabled else "Stats for Nerds disabled.")
+    def dev_gallery(self):
+        if not self.stats_enabled:self.page("Settings");return
+        head=self.card(self.body);head.pack(fill="x",pady=(0,10))
+        self.section(head,"DEV GALLERY","Diagnostics, application logs and direct Horizon CLI access.")
+        row=ctk.CTkFrame(head,fg_color="transparent");row.pack(fill="x",padx=15,pady=12)
+        self.dev_command_entry=ctk.CTkEntry(row,placeholder_text="e.g. versions --installed",height=36,fg_color=ALT,border_color=BORDER)
+        self.dev_command_entry.pack(side="left",fill="x",expand=True,padx=(0,8))
+        self.button(row,"RUN HORIZON COMMAND",self.run_dev_command,True,height=36).pack(side="right")
+        logs=self.card(self.body);logs.pack(fill="both",expand=True)
+        bar=ctk.CTkFrame(logs,fg_color="transparent");bar.pack(fill="x",padx=12,pady=(10,0))
+        self.label(bar,"LIVE APPLICATION LOGS",9,CYAN,True).pack(side="left")
+        self.button(bar,"CLEAR",self.clear_dev_logs,height=27,width=65).pack(side="right")
+        self.dev_console=ctk.CTkTextbox(logs,fg_color=ALT,text_color=TEXT,corner_radius=8,font=("Consolas",9),wrap="word")
+        self.dev_console.pack(fill="both",expand=True,padx=12,pady=10)
+        self.dev_console.insert("end","\\n".join(self.log_history[-100:]) or "No logs recorded yet.")
+        self.dev_console.configure(state="disabled")
+    def run_dev_command(self):
+        import shlex
+        raw=self.dev_command_entry.get().strip()
+        if not raw:return
+        try:args=shlex.split(raw,posix=False)
+        except ValueError as e:messagebox.showerror(APP,"Could not parse command: "+str(e));return
+        args=[x.strip('"') for x in args]
+        if args and args[0].lower() in ("horizon","horizon-launcher.exe"):args=args[1:]
+        if not args:messagebox.showinfo(APP,"Enter a Horizon subcommand.");return
+        self.command(args,"Developer command: "+raw)
+    def clear_dev_logs(self):
+        self.log_history.clear()
+        if hasattr(self,"dev_console") and self.dev_console.winfo_exists():
+            self.dev_console.configure(state="normal");self.dev_console.delete("1.0","end");self.dev_console.configure(state="disabled")
+    def uninstall_jigarzon(self):
+        keep=messagebox.askyesno(APP,"Keep Horizon and Minecraft game files?\\n\\nYES keeps the Horizon installation, worlds and downloaded game files.\\nNO removes the Horizon folder as well.")
+        uninstaller=Path(sys.executable).resolve().parent/"unins000.exe"
+        if not uninstaller.is_file():
+            messagebox.showerror(APP,"The Inno Setup uninstaller was not found. Install Jigarzon using Jigarzon-Setup.exe first.")
+            return
+        if not messagebox.askyesno(APP,"Uninstall Jigarzon Launcher now?"):return
+        if not keep:
+            import shutil
+            shutil.rmtree(data_dir()/"Horizon",ignore_errors=True)
+        subprocess.Popen([str(uninstaller),"/SILENT"])
+        self.root.after(300,self.root.destroy)
+    def reinstall_jigarzon(self):
+        if not messagebox.askyesno(APP,"Download and install the latest published Jigarzon release?"):return
+        def work():
+            try:
+                req=urllib.request.Request(APP_RELEASES,headers={"User-Agent":"Jigarzon-Launcher","Accept":"application/vnd.github+json"})
+                with urllib.request.urlopen(req,timeout=20) as response:release=json.loads(response.read().decode("utf-8"))
+                asset=next((a for a in release.get("assets",[]) if a.get("name")=="Jigarzon-Setup.exe"),None)
+                if not asset:raise RuntimeError("The latest release does not contain Jigarzon-Setup.exe yet.")
+                target=data_dir()/"Jigarzon-Setup-reinstall.exe"
+                req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
+                with urllib.request.urlopen(req,timeout=90) as response,target.open("wb") as out:
+                    while True:
+                        block=response.read(1024*1024)
+                        if not block:break
+                        out.write(block)
+                self.jobs.put(("reinstall_ready",str(target)))
+            except Exception as e:self.jobs.put(("log","Reinstall download failed: "+str(e)))
+        threading.Thread(target=work,daemon=True).start()
     def check_gamefiles(self):self.command(["prepare","--download"],"Checking and updating Minecraft game files")
     def update_horizon(self):self.command(["install","latest"],"Updating Horizon to latest")
 
@@ -614,10 +695,12 @@ class Jigarzon:
         try:
             while True:
                 kind, val = self.jobs.get_nowait()
-                if kind == "log" and hasattr(self, "console") and self.console.winfo_exists():
-                    self.console.configure(state="normal")
-                    self.console.insert("end", val + "\n"); self.console.see("end")
-                    self.console.configure(state="disabled")
+                if kind == "log":
+                    self.log_history.append(str(val)); self.log_history=self.log_history[-500:]
+                    for widget_name in ("console","dev_console"):
+                        widget=getattr(self,widget_name,None)
+                        if widget is not None and widget.winfo_exists():
+                            widget.configure(state="normal");widget.insert("end",str(val)+"\n");widget.see("end");widget.configure(state="disabled")
                 elif kind == "status": self.status.configure(text="●  " + val[0], text_color=CYAN if val[1] else GREEN)
                 elif kind == "progress": self.status.configure(text="●  " + val, text_color=CYAN)
                 elif kind == "horizon":
@@ -636,6 +719,10 @@ class Jigarzon:
                 elif kind == "launcher_update_ready":
                     self.log("A newer Jigarzon version is ready. Starting the installer.")
                     self.install_launcher_update(val)
+                elif kind == "reinstall_ready":
+                    self.log("Latest Jigarzon installer downloaded. Starting setup.")
+                    subprocess.Popen([val])
+                    self.root.after(300,self.root.destroy)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
                     if label.startswith("Playing Minecraft "):
