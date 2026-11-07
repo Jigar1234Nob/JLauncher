@@ -82,7 +82,7 @@ class Launcher:
     else:self.q.put(("log","No installed builds were returned."))
    except Exception:self.q.put(("log","Could not parse the installed build list."))
   self.run(["versions","--installed","--json"],"Refreshing installed builds",done)
- def install(self):self.run(["install","latest"],"Installing latest Horizon build",lambda _:self.refresh())
+ def install(self):self.run(["install","latest"],"Installing latest Horizon build")
  def prepare(self):self.run(["prepare"],"Preparing Minecraft files")
  def signin(self):self.run(["account","sign-in"],"Starting Microsoft sign-in")
  def play(self):
