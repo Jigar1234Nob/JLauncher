@@ -1,4 +1,12 @@
-# Jigarzon Launcher
+<p align="center">
+  <img src="assets/jigarzon-logo.svg" alt="Jigarzon Launcher logo" width="160">
+</p>
+
+<h1 align="center">Jigarzon Launcher</h1>
+
+<p align="center">
+  A Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+</p>
 
 Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
 
