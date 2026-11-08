@@ -1,12 +1,19 @@
-# Jigarzon Launcher
+<p align="center">
+  <img src="assets/jigarzon-logo.svg" alt="Jigarzon Launcher logo" width="160">
+</p>
+
+<h1 align="center">Jigarzon Launcher</h1>
+
+<p align="center">
+  A Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+</p>
 
 Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
 
 ## Features
 
 - Guided Microsoft sign-in and first-run setup.
-- Automatically checks for Jigarzon Launcher updates at startup and installs newer published Windows releases. It prefers a matching Windows ARM64 or x64 installer when published, with previous installer names as compatibility fallbacks. It will never download a Windows installer on another operating system.
-- Branded startup splash remains visible for at least seven seconds and until the launcher update check finishes.
+- Automatically checks for Jigarzon Launcher updates at startup and installs newer published releases.
 - Checks Horizon's latest Nightly build on every startup and installs it when needed.
 - Reads the current Minecraft Java Edition version from Horizon's official project information (currently 26.3).
 - Home dashboard with the Jigarzon v2.00 release announcement and the current Horizon build label.
@@ -14,7 +21,7 @@ Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Mine
 - Windows application icon, taskbar icon and Inno Setup installer branding.
 - Per-user Windows installer with Start Menu and optional desktop shortcuts.
 - Instance manager to create, select, rename, reinstall and delete instances.
-- Custom Horizon Mods browser connected to the official [playhorizon.dev/mods](https://playhorizon.dev/mods) registry, with category search and direct installation into the selected instance.
+- Mod browser for Horizon-compatible content.
 - Open the selected instance's Horizon mods folder.
 - Optional Stats for Nerds developer gallery with live application logs and Horizon CLI access.
 - In-app reinstall and uninstall controls, including a choice to preserve Horizon and Minecraft files.
@@ -28,6 +35,6 @@ A Microsoft account that owns Minecraft: Java Edition is required. Minecraft ass
 
 ## Building on Windows
 
-The GitHub Actions workflow builds both `JigarzonLauncher.exe` and `Jigarzon-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
+The GitHub Actions workflow runs from `build` and builds both `JigarzonLauncher.exe` and `Jigarzon-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
 
 Jigarzon is an independent project and is not affiliated with Mojang Studios or Microsoft.
