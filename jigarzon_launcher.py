@@ -227,7 +227,7 @@ class Jigarzon:
         self.button(play,"▶   PLAY MINECRAFT",self.play,True,height=47).pack(fill="x",padx=21,pady=(0,17))
         news=self.card(self.body);news.pack(fill="both",expand=True)
         self.label(news,"JIGARZON RELEASE",10,CYAN,True).pack(anchor="w",padx=19,pady=(20,7))
-        self.label(news,"Jigarzon Launcher v1.00 has released!",21,TEXT,True).pack(anchor="w",padx=19)
+        self.label(news,"Jigarzon Launcher v2.00 has released!",21,TEXT,True).pack(anchor="w",padx=19)
         self.label(news,"Your Minecraft worlds, instances and mods. One launcher, with a cleaner way to play.",10,MUTED,wraplength=760).pack(anchor="w",padx=19,pady=(7,20))
 
     def instances_page(self):
