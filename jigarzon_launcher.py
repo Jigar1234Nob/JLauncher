@@ -92,12 +92,9 @@ def launcher_update_asset(assets):
         names = (["Jigarzon-Setup-Windows-arm64.exe", "Jigarzon-Setup-arm64.exe"] if arm64 else
                  ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
         names += ["Jigarzon-Setup.exe"]
-    elif system == "darwin":
-        names = (["Jigarzon-Setup-macOS-arm64.dmg", "Jigarzon-macOS-arm64.zip"] if arm64 else
-                 ["Jigarzon-Setup-macOS-x64.dmg", "Jigarzon-macOS-x64.zip"])
-    elif system == "linux":
-        names = ["Jigarzon-Linux-arm64.AppImage", "Jigarzon-Linux-aarch64.AppImage"] if arm64 else ["Jigarzon-Linux-x64.AppImage", "Jigarzon-Linux-x86_64.AppImage"]
     else:
+        # Jigarzon is currently packaged for Windows only. Never download a
+        # Windows installer on macOS/Linux or pretend it can update those OSes.
         return None
     return next((a for name in names for a in assets if a.get("name") == name), None)
 
