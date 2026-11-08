@@ -16,7 +16,7 @@ Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Mine
 - Automatically checks for Jigarzon Launcher updates at startup and installs newer published releases.
 - Checks Horizon's latest Nightly build on every startup and installs it when needed.
 - Reads the current Minecraft Java Edition version from Horizon's official project information (currently 26.3).
-- Home dashboard with the Jigarzon v1.00 release announcement and the current Horizon build label.
+- Home dashboard with the Jigarzon v2.00 release announcement and the current Horizon build label.
 - Prism-inspired dark interface with the JL purple/cyan identity.
 - Windows application icon, taskbar icon and Inno Setup installer branding.
 - Per-user Windows installer with Start Menu and optional desktop shortcuts.
@@ -35,6 +35,6 @@ A Microsoft account that owns Minecraft: Java Edition is required. Minecraft ass
 
 ## Building on Windows
 
-The GitHub Actions workflow builds both `JigarzonLauncher.exe` and `Jigarzon-Setup.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v1.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
+The GitHub Actions workflow runs from `main` and builds both `JigarzonLauncher.exe` and `Jigarzon-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
 
 Jigarzon is an independent project and is not affiliated with Mojang Studios or Microsoft.
