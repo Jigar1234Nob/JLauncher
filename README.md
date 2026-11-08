@@ -19,6 +19,7 @@ Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Mine
 - Home dashboard with the Jigarzon v2.00 release announcement and the current Horizon build label.
 - Prism-inspired dark interface with the JL purple/cyan identity.
 - Windows application icon, taskbar icon and Inno Setup installer branding.
+- System-tray support: closing the window keeps Jigarzon running in the notification area; the tray menu can reopen the launcher, launch the selected instance, or fully exit.
 - Per-user Windows installer with Start Menu and optional desktop shortcuts.
 - Instance manager to create, select, rename, reinstall and delete instances.
 - Mod browser for Horizon-compatible content.
