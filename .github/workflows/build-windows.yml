@@ -55,10 +55,10 @@ jobs:
           name: Jigarzon-Launcher-Windows
           path: |
             dist/JigarzonLauncher.exe
-            dist/Jigarzon-Setup.exe
+            dist/Jigarzon-Setup-Windows.exe
           if-no-files-found: error
       - name: Publish installer on GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Jigarzon-Setup.exe
+          files: dist/Jigarzon-Setup-Windows.exe
