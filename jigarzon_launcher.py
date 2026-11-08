@@ -364,6 +364,7 @@ class Jigarzon:
         self.label(instance_row,"INSTALL TARGET",9,MUTED,True).pack(side="left")
         self.label(instance_row,self.selected_instance,10,CYAN,True).pack(side="left",padx=(9,0))
         self.button(instance_row,"Open mods folder",self.open_selected_mod_folder,height=30).pack(side="right")
+        self.button(instance_row,"Build native mods",self.build_native_mods,True,height=30).pack(side="right",padx=(0,7))
         search=self.card(self.body);search.pack(fill="x",pady=(0,11))
         self.label(search,"SEARCH THE OFFICIAL HORIZON MODS REGISTRY",9,MUTED,True).pack(anchor="w",padx=14,pady=(12,5))
         row=ctk.CTkFrame(search,fg_color="transparent");row.pack(fill="x",padx=13,pady=(0,8))
@@ -455,7 +456,7 @@ class Jigarzon:
             if details:self.label(r,details,8,CYAN).pack(anchor="w",padx=11,pady=(0,2))
             self.label(r,str(desc)[:240] or "Listed in the official Horizon mods registry.",9,MUTED,wraplength=730).pack(anchor="w",padx=11,pady=(0,6))
             if not installed:
-                self.button(r,"Install",lambda ident=str(slug):self.install_mod(ident),True,height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
+                self.button(r,"Install",lambda ident=str(slug),mod_kind=str(kind):self.install_mod(ident,mod_kind),True,height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
             else:
                 self.button(r,"Remove",lambda ident=str(slug):self.remove_mod(ident),height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
     def search_mods(self):
@@ -465,18 +466,38 @@ class Jigarzon:
         args=["mods","search",q,"--source","horizon","--kind",kind] if q else ["mods","search","--source","horizon","--kind",kind]
         self.command(args,"Searching Horizon "+self.mod_kind.get().lower(),lambda out:self.show_mod_output(out),True)
     def list_mods(self):self.command(["mods","list","--instance",self.selected_instance],"Loading installed Horizon content",lambda out:self.show_mod_output(out,True),True)
-    def install_mod(self,slug):
-        warning="Install "+slug+" from Horizon's official registry into "+self.selected_instance+"?\n\nHorizon verifies downloaded files against the registry before installing. Native mods are not sandboxed and can run code on your computer. Only install projects you trust."
+    def install_mod(self,slug,kind=""):
+        warning="Install "+slug+" from Horizon's official registry into "+self.selected_instance+"?\n\nHorizon verifies downloaded files against the registry before installing. Native mods run with your Windows account permissions and are not sandboxed. Only install projects you trust."
         if messagebox.askyesno(APP,warning):
             self.mod_install_attempts[slug] = 1
-            self.run_mod_install(slug, 1)
+            self.run_mod_install(slug,1,kind)
 
-    def run_mod_install(self,slug,attempt):
+    def run_mod_install(self,slug,attempt,kind=""):
         self.mod_install_attempts[slug] = attempt
         label="Installing Horizon project "+slug
         self.log("Installing "+slug+" (attempt "+str(attempt)+" of 4)…")
         self.command(["mods","install",slug,"--source","horizon","--instance",self.selected_instance],
-                     label,lambda _: (self.mod_install_attempts.pop(slug,None),self.list_mods()))
+                     label,lambda out:self.mod_install_done(slug,kind,out))
+
+    def mod_install_done(self,slug,kind,out):
+        self.mod_install_attempts.pop(slug,None)
+        if "native" in str(kind).lower():
+            warning=(""+slug+" is a native Horizon mod. It is installed, but it will not run until Horizon compiles it into a native build.\n\n"
+                     "Building runs native code with your Windows account permissions and may download Rust toolchains and compile Horizon. Only continue if you trust this mod.\n\n"
+                     "Build native mods for instance "+self.selected_instance+" now?")
+            if messagebox.askyesno(APP,warning,icon="warning"):
+                self.command(["native-build","--instance",self.selected_instance,"--trust-native-code"],
+                             "Building native mods for "+self.selected_instance,lambda _:self.list_mods())
+                return
+            self.log(slug+" is installed but has not been built. Use Build native mods when ready.")
+        self.list_mods()
+
+    def build_native_mods(self):
+        warning=("Horizon will compile all enabled native mods for "+self.selected_instance+". This runs their native code with your Windows account permissions and may download Rust toolchains and compile Horizon.\n\n"
+                 "Only continue if you trust every enabled native mod in this instance.")
+        if messagebox.askyesno(APP,warning,icon="warning"):
+            self.command(["native-build","--instance",self.selected_instance,"--trust-native-code"],
+                         "Building native mods for "+self.selected_instance,lambda _:self.list_mods())
     def remove_mod(self,slug):
         if messagebox.askyesno(APP,"Remove "+slug+" from "+self.selected_instance+"?"):
             self.command(["mods","remove",slug,"--instance",self.selected_instance],"Removing "+slug,lambda _:self.list_mods())
@@ -810,6 +831,8 @@ class Jigarzon:
                     self.root.after(300,self.root.destroy)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
+                    if label.startswith("Building native mods for ") and code != 0:
+                        messagebox.showerror(APP,"Native mod build failed.\n\n"+(out.strip() or "Horizon could not build the selected instance. Check the activity log for details."))
                     if label.startswith("Installing Horizon project ") and code != 0:
                         slug=label[len("Installing Horizon project "):]
                         attempt=self.mod_install_attempts.get(slug,1)
