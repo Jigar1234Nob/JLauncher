@@ -5,7 +5,7 @@ Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Mine
 ## Features
 
 - Guided Microsoft sign-in and first-run setup.
-- Automatically checks for Jigarzon Launcher updates at startup and installs newer published releases.
+- Automatically checks for Jigarzon Launcher updates at startup and installs newer published Windows releases. It prefers a matching Windows ARM64 or x64 installer when published, with the existing universal Windows installer as a fallback. It will never download a Windows installer on another operating system.
 - Branded startup splash remains visible for at least seven seconds and until the launcher update check finishes.
 - Checks Horizon's latest Nightly build on every startup and installs it when needed.
 - Reads the current Minecraft Java Edition version from Horizon's official project information (currently 26.3).
