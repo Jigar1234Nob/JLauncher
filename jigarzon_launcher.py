@@ -142,6 +142,10 @@ class Jigarzon:
         self.minecraft_version = "26.3"
         self.nav = {}
         self.launcher_update_checked = False
+        self.horizon_startup_checked = False
+        self.startup_account_checked = False
+        self.account_name = ""
+        self.account_uuid = ""
         self.mod_install_attempts = {}
         self.mod_install_kinds = {}
         self.build()
@@ -198,8 +202,69 @@ class Jigarzon:
         self.title=self.label(left,"Home",23,TEXT,True);self.title.pack(anchor="w",pady=(4,0))
         self.subtitle=self.label(left,"Your Minecraft library.",10,MUTED);self.subtitle.pack(anchor="w")
         self.button(header,"↻ Refresh",self.refresh).pack(side="right",pady=9)
+        account_box=ctk.CTkFrame(header,fg_color="transparent")
+        account_box.pack(side="right",padx=(0,12),pady=9)
+        self.account_name_label=self.label(account_box,"Not signed in",9,MUTED,True)
+        self.account_name_label.pack(side="left",padx=(0,8))
+        self.logout_button=self.button(account_box,"Log out",self.logout_account,height=30)
         self.body=ctk.CTkScrollableFrame(main,fg_color="transparent",corner_radius=0);self.body.pack(fill="both",expand=True,padx=27,pady=(0,18))
         self.page("Home")
+        self.update_account_ui()
+
+    def update_account_ui(self):
+        if not hasattr(self,"account_name_label") or not self.account_name_label.winfo_exists():return
+        self.account_name_label.configure(text=self.account_name or "Not signed in",
+                                          text_color=CYAN if self.account_name else MUTED)
+        if self.account_name:
+            self.logout_button.pack(side="left")
+        else:
+            self.logout_button.pack_forget()
+
+    def account_from_output(self,out):
+        data=json.loads(out)
+        accounts=data if isinstance(data,list) else data.get("accounts",data.get("items",[]))
+        if not isinstance(accounts,list):accounts=[]
+        selected=None
+        selected_name=data.get("selected") if isinstance(data,dict) else None
+        for account in accounts:
+            if not isinstance(account,dict):continue
+            name=str(account.get("name") or account.get("username") or account.get("gamertag") or "").strip()
+            if not name:continue
+            if (account.get("selected") or account.get("is_selected") or account.get("active") or
+                (selected_name and str(selected_name).lower() in (name.lower(),str(account.get("uuid","")).lower()))):
+                selected=account
+                break
+        if selected is None:
+            selected=next((a for a in accounts if isinstance(a,dict) and
+                           (a.get("name") or a.get("username") or a.get("gamertag"))),None)
+        if selected:
+            self.account_name=str(selected.get("name") or selected.get("username") or selected.get("gamertag"))
+            self.account_uuid=str(selected.get("uuid") or selected.get("id") or "")
+        else:
+            self.account_name=""
+            self.account_uuid=""
+        self.update_account_ui()
+        return bool(selected)
+
+    def check_account(self):
+        self.command(["account","list"],"Loading Microsoft account",None,True)
+
+    def logout_account(self):
+        if not self.account_name:return
+        who=self.account_uuid or self.account_name
+        if not messagebox.askyesno(APP,"Sign out of the Microsoft account "+self.account_name+"? You will need to sign in again before playing."):
+            return
+        self.command(["account","sign-out",who],"Signing out of Microsoft account",self.account_signed_out)
+
+    def account_signed_out(self,_out):
+        self.account_name=""
+        self.account_uuid=""
+        self.setup_complete=False
+        self.setup_step=0
+        self.save()
+        self.update_account_ui()
+        self.log("Microsoft account signed out. Sign in again to continue.")
+        self.page("Tutorial")
 
     def section(self, p, title, sub=""):
         self.label(p, title, 13, TEXT, True).pack(anchor="w")
@@ -346,10 +411,11 @@ class Jigarzon:
 
     def account_checked(self,out):
         try:
-            d=json.loads(out);accounts=d if isinstance(d,list) else d.get("accounts",d.get("items",[]))
-            if not accounts:raise ValueError()
+            if not self.account_from_output(out):raise ValueError()
             self.setup_step=1;self.save();self.page("Tutorial")
-        except Exception:messagebox.showwarning(APP,"No signed-in Microsoft account was confirmed. Finish the browser sign-in, then try again.")
+        except Exception:
+            self.account_name="";self.account_uuid="";self.update_account_ui()
+            messagebox.showwarning(APP,"No signed-in Microsoft account was confirmed. Finish the browser sign-in, then try again.")
     def setup_install(self):self.command(["install","latest"],"Installing latest Horizon",lambda _:self.setup_installed())
     def setup_installed(self):self.setup_step=2;self.save();self.page("Tutorial")
     def setup_prepare(self):self.command(["prepare","--download"],"Downloading and checking Minecraft files",lambda _:self.setup_prepared())
@@ -615,7 +681,8 @@ class Jigarzon:
         if found:
             self.exe.set(str(found)); self.save(); self.log("Horizon launcher found.")
             if not self.setup_complete:self.page("Tutorial")
-            self.command(["install","latest"],"Checking for Horizon updates",lambda _:self.refresh())
+            self.log("Checking for Horizon updates during startup…")
+            self.command(["install","latest"],"Checking for Horizon updates")
         else:
             self.log("Horizon is missing. Downloading the official package…"); self.download_horizon()
 
@@ -814,9 +881,11 @@ class Jigarzon:
                     self.save(); self.page("Tutorial")
                     self.log("Horizon installed: " + val); self.set_status("Horizon connected")
                     if hasattr(self, "path_label") and self.path_label.winfo_exists(): self.path_label.configure(text=val)
-                    self.refresh()
+                    self.log("Checking for Horizon updates during startup…")
+                    self.command(["install","latest"],"Checking for Horizon updates")
                 elif kind == "download_error":
-                    self.busy = False; self.set_status("Horizon setup failed")
+                    self.busy = False; self.horizon_startup_checked = True; self.startup_account_checked = True
+                    self.set_status("Horizon setup failed")
                     messagebox.showerror(APP, "Could not download Horizon:\n\n" + val + "\n\nRetry from Settings.")
                 elif kind == "discord": self.discord_start(val)
                 elif kind == "signin_code": self.show_signin_code(val)
@@ -835,6 +904,18 @@ class Jigarzon:
                     self.root.after(300,self.root.destroy)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
+                    if label == "Checking for Horizon updates":
+                        self.horizon_startup_checked = True
+                        if code != 0:self.log("Horizon's startup update check could not complete. The installed version will be kept.")
+                        self.check_account()
+                    elif label == "Loading Microsoft account":
+                        self.startup_account_checked = True
+                        if code == 0:
+                            try:self.account_from_output(out)
+                            except Exception:
+                                self.account_name="";self.account_uuid="";self.update_account_ui()
+                        else:
+                            self.account_name="";self.account_uuid="";self.update_account_ui()
                     if label.startswith("Building native mods for ") and code != 0:
                         messagebox.showerror(APP,"Native mod build failed.\n\n"+(out.strip() or "Horizon could not build the selected instance. Check the activity log for details."))
                     if label.startswith("Installing Horizon project ") and code != 0:
@@ -888,23 +969,34 @@ def main():
     ctk.CTkLabel(frame, text="A better way into your next world.", font=("Segoe UI", 11), text_color=MUTED).pack(pady=(3, 24))
     bar=ctk.CTkProgressBar(frame, width=390, height=8, corner_radius=8, progress_color=PURPLE, fg_color=ALT); bar.pack(pady=(0, 13)); bar.set(.04)
     label=ctk.CTkLabel(frame, text="Starting Jigarzon…", font=("Segoe UI", 10), text_color=MUTED); label.pack()
+    splash.attributes("-topmost", True)
+    splash.lift()
     app=Jigarzon(root)
     app.set_window_icon(splash)
     splash_started=__import__("time").monotonic()
     def watch():
         elapsed=__import__("time").monotonic()-splash_started
-        label.configure(text="Checking for Jigarzon updates…" if not app.launcher_update_checked else app.status.cget("text").replace("●  ", ""))
+        splash.attributes("-topmost", True)
+        splash.lift()
+        if not app.launcher_update_checked:
+            label.configure(text="Checking for Jigarzon updates…")
+        elif not app.horizon_startup_checked:
+            label.configure(text="Checking for Horizon updates…")
+        elif not app.startup_account_checked:
+            label.configure(text="Checking your Microsoft account…")
+        else:
+            label.configure(text="Finishing startup…")
         bar.set(min(.95, max(.08, elapsed/7.0)))
-        # Keep the splash visible for at least seven seconds and until the
-        # launcher update check has finished (including any update download).
-        if elapsed>=7.0 and app.launcher_update_checked:
+        # Keep the splash visible above other windows until all startup checks
+        # and any available launcher/Horizon updates have finished.
+        if elapsed>=7.0 and app.launcher_update_checked and app.horizon_startup_checked and app.startup_account_checked:
             bar.set(1); label.configure(text="Jigarzon is ready")
             finish(); return
         root.after(150, watch)
     def finish():
         try: splash.destroy()
         except Exception: pass
-        root.deiconify(); root.lift()
+        root.deiconify(); root.lift(); root.focus_force()
     root.after(150, watch); root.mainloop()
 
 if __name__ == "__main__":
