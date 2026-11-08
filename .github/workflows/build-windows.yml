@@ -28,7 +28,7 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
       - name: Install build dependencies
-        run: python -m pip install --upgrade pip pyinstaller customtkinter pypresence tkinterdnd2 pillow
+        run: python -m pip install --upgrade pip pyinstaller customtkinter pypresence tkinterdnd2 pillow pystray
       - name: Generate JL application icon
         run: python generate_icon.py
       - name: Build Windows application
@@ -37,7 +37,7 @@ jobs:
           --name JigarzonLauncher --icon assets/jigarzon.ico
           --add-data "assets/jigarzon.ico;assets"
           --collect-all customtkinter --collect-all pypresence
-          --collect-all tkinterdnd2 jigarzon_launcher.py
+          --collect-all tkinterdnd2 --collect-all pystray jigarzon_launcher.py
       - name: Build Inno Setup installer
         shell: pwsh
         run: |
