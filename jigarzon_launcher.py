@@ -120,6 +120,7 @@ class Jigarzon:
         self.rpc, self.game_active = None, False
         self.minecraft_version = "26.3"
         self.nav = {}
+        self.launcher_update_checked = False
         self.build()
         self.root.after(100, self.poll)
         self.root.after(250, self.connect_startup)
@@ -333,18 +334,29 @@ class Jigarzon:
     def finish_setup(self):self.setup_complete=True;self.save();self.page("Home")
 
     def mods_page(self):
-        card=self.card(self.body);card.pack(fill="x",pady=(0,10))
-        self.label(card,"MOD BROWSER",9,CYAN,True).pack(anchor="w",padx=15,pady=(12,4))
-        self.label(card,"Search mods for instance: "+self.selected_instance,9,MUTED).pack(anchor="w",padx=15)
-        row=ctk.CTkFrame(card,fg_color="transparent");row.pack(fill="x",padx=13,pady=11)
-        self.mod_query=ctk.CTkEntry(row,placeholder_text="Search mods…",height=36,fg_color=ALT,border_color=BORDER,corner_radius=8);self.mod_query.pack(side="left",fill="x",expand=True,padx=(0,7))
-        self.button(row,"Search",self.search_mods,True,height=36).pack(side="left")
-        self.button(row,"Installed",self.list_mods,height=36).pack(side="left",padx=(7,0))
-        self.button(row,"OPEN MODS FOLDER",self.open_selected_mod_folder,height=36).pack(side="right",padx=(7,0))
-        self.drop_hint=self.label(card,"Or drag a Horizon .mrpack / supported modpack ZIP onto this window to import it.",9,MUTED)
-        self.drop_hint.pack(anchor="w",padx=15,pady=(0,10))
-        self.mod_list=ctk.CTkScrollableFrame(self.body,fg_color=PANEL,corner_radius=11,border_width=1,border_color=BORDER);self.mod_list.pack(fill="both",expand=True)
-        self.label(self.mod_list,"Search for mods or view installed content.",10,MUTED).pack(anchor="w",padx=13,pady=15)
+        hero=self.card(self.body);hero.pack(fill="x",pady=(0,11))
+        self.label(hero,"HORIZON MODS  /  DISCOVER",9,CYAN,True).pack(anchor="w",padx=18,pady=(16,5))
+        self.label(hero,"Make Horizon yours.",21,TEXT,True).pack(anchor="w",padx=18)
+        self.label(hero,"Find compatible content and install it directly into your selected Horizon instance.",10,MUTED,wraplength=760).pack(anchor="w",padx=18,pady=(4,13))
+        instance_row=ctk.CTkFrame(hero,fg_color="transparent");instance_row.pack(fill="x",padx=17,pady=(0,13))
+        self.label(instance_row,"INSTALL TARGET",9,MUTED,True).pack(side="left")
+        self.label(instance_row,self.selected_instance,10,CYAN,True).pack(side="left",padx=(9,0))
+        self.button(instance_row,"Open mods folder",self.open_selected_mod_folder,height=30).pack(side="right")
+        search=self.card(self.body);search.pack(fill="x",pady=(0,11))
+        self.label(search,"SEARCH HORIZON CONTENT",9,MUTED,True).pack(anchor="w",padx=14,pady=(12,5))
+        row=ctk.CTkFrame(search,fg_color="transparent");row.pack(fill="x",padx=13,pady=(0,12))
+        self.mod_query=ctk.CTkEntry(row,placeholder_text="Search by mod name or keyword…",height=38,fg_color=ALT,border_color=BORDER,corner_radius=8)
+        self.mod_query.pack(side="left",fill="x",expand=True,padx=(0,8))
+        self.mod_query.bind("<Return>",lambda _event:self.search_mods())
+        self.button(row,"⌕  Search",self.search_mods,True,height=38).pack(side="left")
+        self.button(row,"Installed",self.list_mods,height=38).pack(side="left",padx=(7,0))
+        self.drop_hint=self.label(self.body,"You can also import a Horizon .mrpack or supported modpack ZIP by dragging it onto the app. Raw Java .jar files are not automatically compatible with Horizon.",9,MUTED,wraplength=780)
+        self.drop_hint.pack(anchor="w",padx=4,pady=(0,10))
+        self.mod_list=ctk.CTkScrollableFrame(self.body,fg_color=PANEL,corner_radius=11,border_width=1,border_color=BORDER)
+        self.mod_list.pack(fill="both",expand=True)
+        welcome=self.card(self.mod_list);welcome.pack(fill="x",padx=8,pady=8)
+        self.label(welcome,"Explore mods for Horizon",13,TEXT,True).pack(anchor="w",padx=14,pady=(13,3))
+        self.label(welcome,"Search the Horizon mod catalogue above. Choose a result to install it into "+self.selected_instance+". Use Installed to manage content already added to this instance.",9,MUTED,wraplength=720).pack(anchor="w",padx=14,pady=(0,13))
     def selected_instance_game_dir(self):
         for item in self.instances:
             if isinstance(item,dict) and (item.get("name") or item.get("id")) == self.selected_instance:
@@ -570,6 +582,8 @@ class Jigarzon:
             except Exception as e:
                 # No published release yet is normal for a source checkout.
                 if "HTTP Error 404" not in str(e):self.jobs.put(("log","Jigarzon update check: "+str(e)))
+            finally:
+                self.jobs.put(("launcher_update_checked", True))
         threading.Thread(target=work,daemon=True).start()
 
     def install_launcher_update(self,installer):
@@ -731,6 +745,8 @@ class Jigarzon:
                     self.minecraft_version=val
                     if hasattr(self,"horizon_build_label") and self.horizon_build_label.winfo_exists():
                         self.horizon_build_label.configure(text="Horizon Nightly Latest Build ("+val+")")
+                elif kind == "launcher_update_checked":
+                    self.launcher_update_checked = True
                 elif kind == "launcher_update_ready":
                     self.log("A newer Jigarzon version is ready. Starting the installer.")
                     self.install_launcher_update(val)
@@ -777,20 +793,22 @@ def main():
     label=ctk.CTkLabel(frame, text="Starting Jigarzon…", font=("Segoe UI", 10), text_color=MUTED); label.pack()
     app=Jigarzon(root)
     app.set_window_icon(splash)
+    splash_started=__import__("time").monotonic()
     def watch():
-        label.configure(text=app.status.cget("text").replace("●  ", ""))
-        if app.exe.get() and Path(app.exe.get()).is_file():
-            bar.set(1); label.configure(text="Horizon is ready")
-            root.after(650, finish); return
-        if not app.busy and app.exe.get(): root.after(500, finish); return
-        if not app.busy and "failed" in app.status.cget("text").lower():
-            root.after(300, finish); return
-        root.after(250, watch)
+        elapsed=__import__("time").monotonic()-splash_started
+        label.configure(text="Checking for Jigarzon updates…" if not app.launcher_update_checked else app.status.cget("text").replace("●  ", ""))
+        bar.set(min(.95, max(.08, elapsed/7.0)))
+        # Keep the splash visible for at least seven seconds and until the
+        # launcher update check has finished (including any update download).
+        if elapsed>=7.0 and app.launcher_update_checked:
+            bar.set(1); label.configure(text="Jigarzon is ready")
+            finish(); return
+        root.after(150, watch)
     def finish():
         try: splash.destroy()
         except Exception: pass
         root.deiconify(); root.lift()
-    root.after(250, watch); root.mainloop()
+    root.after(150, watch); root.mainloop()
 
 if __name__ == "__main__":
     main()
