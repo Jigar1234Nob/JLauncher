@@ -142,6 +142,7 @@ class Jigarzon:
         self.minecraft_version = "26.3"
         self.nav = {}
         self.launcher_update_checked = False
+        self.mod_install_attempts = {}
         self.build()
         self.root.after(100, self.poll)
         self.root.after(250, self.connect_startup)
@@ -467,7 +468,15 @@ class Jigarzon:
     def install_mod(self,slug):
         warning="Install "+slug+" from Horizon's official registry into "+self.selected_instance+"?\n\nHorizon verifies downloaded files against the registry before installing. Native mods are not sandboxed and can run code on your computer. Only install projects you trust."
         if messagebox.askyesno(APP,warning):
-            self.command(["mods","install",slug,"--source","horizon","--instance",self.selected_instance],"Installing Horizon project "+slug,lambda _:self.list_mods())
+            self.mod_install_attempts[slug] = 1
+            self.run_mod_install(slug, 1)
+
+    def run_mod_install(self,slug,attempt):
+        self.mod_install_attempts[slug] = attempt
+        label="Installing Horizon project "+slug
+        self.log("Installing "+slug+" (attempt "+str(attempt)+" of 4)…")
+        self.command(["mods","install",slug,"--source","horizon","--instance",self.selected_instance],
+                     label,lambda _: (self.mod_install_attempts.pop(slug,None),self.list_mods()))
     def remove_mod(self,slug):
         if messagebox.askyesno(APP,"Remove "+slug+" from "+self.selected_instance+"?"):
             self.command(["mods","remove",slug,"--instance",self.selected_instance],"Removing "+slug,lambda _:self.list_mods())
@@ -801,6 +810,21 @@ class Jigarzon:
                     self.root.after(300,self.root.destroy)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
+                    if label.startswith("Installing Horizon project ") and code != 0:
+                        slug=label[len("Installing Horizon project "):]
+                        attempt=self.mod_install_attempts.get(slug,1)
+                        transient=bool(re.search(r"\\b(408|425|429|500|502|503|504)\\b|timed?\\s*out|timeout|temporarily unavailable|bad gateway|gateway timeout",out,re.IGNORECASE))
+                        if transient and attempt < 4:
+                            delay=2 ** attempt
+                            self.log("The mod download failed with a temporary network/server error. Retrying in "+str(delay)+" seconds…")
+                            self.set_status("Retrying mod download",True)
+                            self.root.after(delay*1000,lambda project=slug,next_attempt=attempt+1:self.run_mod_install(project,next_attempt))
+                            continue
+                        self.mod_install_attempts.pop(slug,None)
+                        details=out.strip() or "Horizon could not download this project."
+                        if transient:
+                            details += "\\n\\nThe download server did not respond after 4 attempts. Check your connection and try installing again later."
+                        messagebox.showerror(APP,"Could not install "+slug+":\\n\\n"+details)
                     if label.startswith("Playing Minecraft "):
                         self.stop_discord()
                         if "Sign in with a Microsoft account that owns Minecraft: Java Edition to play" in out and not self.signin_pending:
