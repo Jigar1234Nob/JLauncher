@@ -143,6 +143,7 @@ class Jigarzon:
         self.nav = {}
         self.launcher_update_checked = False
         self.mod_install_attempts = {}
+        self.mod_install_kinds = {}
         self.build()
         self.root.after(100, self.poll)
         self.root.after(250, self.connect_startup)
@@ -470,9 +471,11 @@ class Jigarzon:
         warning="Install "+slug+" from Horizon's official registry into "+self.selected_instance+"?\n\nHorizon verifies downloaded files against the registry before installing. Native mods run with your Windows account permissions and are not sandboxed. Only install projects you trust."
         if messagebox.askyesno(APP,warning):
             self.mod_install_attempts[slug] = 1
+            self.mod_install_kinds[slug] = kind
             self.run_mod_install(slug,1,kind)
 
     def run_mod_install(self,slug,attempt,kind=""):
+        kind = kind or self.mod_install_kinds.get(slug,"")
         self.mod_install_attempts[slug] = attempt
         label="Installing Horizon project "+slug
         self.log("Installing "+slug+" (attempt "+str(attempt)+" of 4)…")
@@ -481,6 +484,7 @@ class Jigarzon:
 
     def mod_install_done(self,slug,kind,out):
         self.mod_install_attempts.pop(slug,None)
+        self.mod_install_kinds.pop(slug,None)
         if "native" in str(kind).lower():
             warning=(""+slug+" is a native Horizon mod. It is installed, but it will not run until Horizon compiles it into a native build.\n\n"
                      "Building runs native code with your Windows account permissions and may download Rust toolchains and compile Horizon. Only continue if you trust this mod.\n\n"
@@ -844,6 +848,7 @@ class Jigarzon:
                             self.root.after(delay*1000,lambda project=slug,next_attempt=attempt+1:self.run_mod_install(project,next_attempt))
                             continue
                         self.mod_install_attempts.pop(slug,None)
+                        self.mod_install_kinds.pop(slug,None)
                         details=out.strip() or "Horizon could not download this project."
                         if transient:
                             details += "\n\nThe download server did not respond after 4 attempts. Check your connection and try installing again later."
