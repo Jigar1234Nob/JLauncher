@@ -7,7 +7,7 @@ import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 APP = "Jigarzon Launcher"
-APP_VERSION = os.getenv("JIGARZON_BUILD_VERSION", "1.0.0")
+APP_VERSION = os.getenv("JIGARZON_BUILD_VERSION", "2.0.0")
 APP_RELEASES = "https://api.github.com/repos/Jigar1234Nob/jigarzon-launcher/releases/latest"
 HORIZON_README = "https://raw.githubusercontent.com/horizon-rust/horizon/main/README.md"
 DISCORD_APP_ID = os.getenv("JIGARZON_DISCORD_APP_ID", "").strip()
