@@ -1,4 +1,6 @@
 import hashlib, json, os, platform, queue, re, subprocess, sys, threading, urllib.request, zipfile
+import pystray
+from PIL import Image, ImageDraw
 from pathlib import Path
 import tkinter as tk
 import webbrowser
@@ -149,10 +151,78 @@ class Jigarzon:
         self.mod_install_attempts = {}
         self.mod_install_kinds = {}
         self.build()
+        self.tray_icon = None
+        self.tray_available = False
+        self.root.protocol("WM_DELETE_WINDOW", self.hide_to_tray)
+        self.start_tray_icon()
         self.root.after(100, self.poll)
         self.root.after(250, self.connect_startup)
         self.root.after(800, self.check_launcher_update)
         self.root.after(1000, self.check_horizon_game_version)
+
+    def tray_image(self):
+        """Load the branded tray icon, with a drawn fallback for source runs."""
+        base=Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+        icon_path=base/"assets"/"jigarzon.ico"
+        try:
+            return Image.open(icon_path).convert("RGBA").resize((64,64), Image.Resampling.LANCZOS)
+        except Exception:
+            image=Image.new("RGBA",(64,64),(23,25,31,255))
+            draw=ImageDraw.Draw(image)
+            draw.polygon([(6,22),(33,4),(33,49),(19,61),(4,61),(19,48),(19,23)],fill="#A33BFF")
+            draw.polygon([(37,11),(53,22),(53,48),(64,48),(53,61),(37,61)],fill="#16BFEA")
+            draw.polygon([(33,4),(37,11),(37,61),(33,57)],fill="#5638E8")
+            return image
+
+    def start_tray_icon(self):
+        try:
+            menu=pystray.Menu(
+                pystray.MenuItem("Open Jigarzon", self.tray_open, default=True),
+                pystray.MenuItem("Launch selected instance", self.tray_launch_instance),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem("Exit", self.tray_exit)
+            )
+            self.tray_icon=pystray.Icon("JigarzonLauncher",self.tray_image(),APP,menu)
+            self.tray_icon.run_detached()
+            self.tray_available=True
+        except Exception as e:
+            self.tray_available=False
+            self.jobs.put(("log","System tray could not be started: "+str(e)))
+
+    def hide_to_tray(self):
+        if self.tray_available:
+            self.root.withdraw()
+        else:
+            self.root.iconify()
+
+    def show_window(self):
+        try:
+            self.root.deiconify()
+            self.root.state("normal")
+            self.root.lift()
+            self.root.focus_force()
+        except tk.TclError:
+            pass
+
+    def tray_open(self, icon, item):
+        self.root.after(0,self.show_window)
+
+    def tray_launch_instance(self, icon, item):
+        # Reuse the normal Play path so tutorial and Microsoft-account checks
+        # remain enforced when launching from the tray.
+        self.root.after(0,self.play)
+
+    def tray_exit(self, icon, item):
+        self.root.after(0,self.exit_app)
+
+    def exit_app(self):
+        icon,self.tray_icon=self.tray_icon,None
+        self.tray_available=False
+        if icon:
+            try: icon.stop()
+            except Exception: pass
+        try: self.root.destroy()
+        except tk.TclError: pass
 
     def save(self):
         save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "selected_instance": self.selected_instance, "setup_complete": self.setup_complete, "setup_step": self.setup_step, "stats_for_nerds": self.stats_enabled})
@@ -648,7 +718,7 @@ class Jigarzon:
             import shutil
             shutil.rmtree(data_dir()/"Horizon",ignore_errors=True)
         subprocess.Popen([str(uninstaller),"/SILENT"])
-        self.root.after(300,self.root.destroy)
+        self.root.after(300,self.exit_app)
     def reinstall_jigarzon(self):
         if not messagebox.askyesno(APP,"Download and install the latest published Jigarzon release?"):return
         def work():
@@ -735,7 +805,7 @@ class Jigarzon:
             if platform.system().lower() != "windows":
                 raise RuntimeError("Automatic installation is currently supported only on Windows. A matching installer was downloaded to: "+installer)
             subprocess.Popen([installer,"/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CLOSEAPPLICATIONS","/RESTARTAPPLICATIONS"])
-            self.root.after(300,self.root.destroy)
+            self.root.after(300,self.exit_app)
         except Exception as e:messagebox.showerror(APP,"Could not start the Jigarzon update installer:\\n\\n"+str(e))
 
     def set_window_icon(self,window):
@@ -901,7 +971,7 @@ class Jigarzon:
                 elif kind == "reinstall_ready":
                     self.log("Latest Jigarzon installer downloaded. Starting setup.")
                     subprocess.Popen([val])
-                    self.root.after(300,self.root.destroy)
+                    self.root.after(300,self.exit_app)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
                     if label == "Checking for Horizon updates":
