@@ -14,7 +14,7 @@ Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Mine
 - Windows application icon, taskbar icon and Inno Setup installer branding.
 - Per-user Windows installer with Start Menu and optional desktop shortcuts.
 - Instance manager to create, select, rename, reinstall and delete instances.
-- Custom Horizon Mods browser with in-app catalogue search, direct installation into the selected instance, and installed-mod management.
+- Custom Horizon Mods browser connected to the official [playhorizon.dev/mods](https://playhorizon.dev/mods) registry, with category search and direct installation into the selected instance.
 - Open the selected instance's Horizon mods folder.
 - Optional Stats for Nerds developer gallery with live application logs and Horizon CLI access.
 - In-app reinstall and uninstall controls, including a choice to preserve Horizon and Minecraft files.
