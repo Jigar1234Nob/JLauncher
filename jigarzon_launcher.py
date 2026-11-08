@@ -80,6 +80,28 @@ def install_horizon(progress):
     progress("Horizon is ready.", 1)
     return exe
 
+def launcher_update_asset(assets):
+    """Return only an installer compatible with this operating system."""
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+    arm64 = machine in ("arm64", "aarch64") or os.getenv("PROCESSOR_ARCHITECTURE", "").upper() == "ARM64" or os.getenv("PROCESSOR_ARCHITEW6432", "").upper() == "ARM64"
+    names = []
+    if system == "windows":
+        # Prefer architecture-specific packages, then accept the current
+        # universal Windows installer used by existing Jigarzon releases.
+        names = (["Jigarzon-Setup-Windows-arm64.exe", "Jigarzon-Setup-arm64.exe"] if arm64 else
+                 ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
+        names += ["Jigarzon-Setup.exe"]
+    elif system == "darwin":
+        names = (["Jigarzon-Setup-macOS-arm64.dmg", "Jigarzon-macOS-arm64.zip"] if arm64 else
+                 ["Jigarzon-Setup-macOS-x64.dmg", "Jigarzon-macOS-x64.zip"])
+    elif system == "linux":
+        names = ["Jigarzon-Linux-arm64.AppImage", "Jigarzon-Linux-aarch64.AppImage"] if arm64 else ["Jigarzon-Linux-x64.AppImage", "Jigarzon-Linux-x86_64.AppImage"]
+    else:
+        return None
+    return next((a for name in names for a in assets if a.get("name") == name), None)
+
+
 def tags(data):
     out = []
     def walk(x):
@@ -534,8 +556,8 @@ class Jigarzon:
             try:
                 req=urllib.request.Request(APP_RELEASES,headers={"User-Agent":"Jigarzon-Launcher","Accept":"application/vnd.github+json"})
                 with urllib.request.urlopen(req,timeout=20) as response:release=json.loads(response.read().decode("utf-8"))
-                asset=next((a for a in release.get("assets",[]) if a.get("name")=="Jigarzon-Setup.exe"),None)
-                if not asset:raise RuntimeError("The latest release does not contain Jigarzon-Setup.exe yet.")
+                asset=launcher_update_asset(release.get("assets",[]))
+                if not asset:raise RuntimeError("There is no Jigarzon installer published for this operating system and architecture yet.")
                 target=data_dir()/"Jigarzon-Setup-reinstall.exe"
                 req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
                 with urllib.request.urlopen(req,timeout=90) as response,target.open("wb") as out:
@@ -584,8 +606,10 @@ class Jigarzon:
                     found=re.findall(r"\d+",v)
                     return tuple(int(x) for x in found[:3]) if found else (0,)
                 if version_tuple(tag)<=version_tuple(APP_VERSION):return
-                asset=next((a for a in release.get("assets",[]) if a.get("name")=="Jigarzon-Setup.exe"),None)
-                if not asset: self.jobs.put(("log","Jigarzon update "+tag+" is published, but its installer asset is missing."));return
+                asset=launcher_update_asset(release.get("assets",[]))
+                if not asset:
+                    self.jobs.put(("log","Jigarzon "+tag+" is available, but this release has no installer for "+platform.system()+" ("+platform.machine()+"). Keeping the current version."))
+                    return
                 self.jobs.put(("log","Jigarzon Launcher update "+tag+" found. Downloading installer…"))
                 req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
                 installer=data_dir()/"Jigarzon-Setup-update.exe"
@@ -608,6 +632,8 @@ class Jigarzon:
 
     def install_launcher_update(self,installer):
         try:
+            if platform.system().lower() != "windows":
+                raise RuntimeError("Automatic installation is currently supported only on Windows. A matching installer was downloaded to: "+installer)
             subprocess.Popen([installer,"/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CLOSEAPPLICATIONS","/RESTARTAPPLICATIONS"])
             self.root.after(300,self.root.destroy)
         except Exception as e:messagebox.showerror(APP,"Could not start the Jigarzon update installer:\\n\\n"+str(e))
