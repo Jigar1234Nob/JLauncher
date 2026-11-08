@@ -813,7 +813,7 @@ class Jigarzon:
                     if label.startswith("Installing Horizon project ") and code != 0:
                         slug=label[len("Installing Horizon project "):]
                         attempt=self.mod_install_attempts.get(slug,1)
-                        transient=bool(re.search(r"\\b(408|425|429|500|502|503|504)\\b|timed?\\s*out|timeout|temporarily unavailable|bad gateway|gateway timeout",out,re.IGNORECASE))
+                        transient=bool(re.search(r"\b(408|425|429|500|502|503|504)\b|timed?\s*out|timeout|temporarily unavailable|bad gateway|gateway timeout",out,re.IGNORECASE))
                         if transient and attempt < 4:
                             delay=2 ** attempt
                             self.log("The mod download failed with a temporary network/server error. Retrying in "+str(delay)+" seconds…")
@@ -823,8 +823,8 @@ class Jigarzon:
                         self.mod_install_attempts.pop(slug,None)
                         details=out.strip() or "Horizon could not download this project."
                         if transient:
-                            details += "\\n\\nThe download server did not respond after 4 attempts. Check your connection and try installing again later."
-                        messagebox.showerror(APP,"Could not install "+slug+":\\n\\n"+details)
+                            details += "\n\nThe download server did not respond after 4 attempts. Check your connection and try installing again later."
+                        messagebox.showerror(APP,"Could not install "+slug+":\n\n"+details)
                     if label.startswith("Playing Minecraft "):
                         self.stop_discord()
                         if "Sign in with a Microsoft account that owns Minecraft: Java Edition to play" in out and not self.signin_pending:
