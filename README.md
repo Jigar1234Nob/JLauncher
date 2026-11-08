@@ -35,6 +35,6 @@ A Microsoft account that owns Minecraft: Java Edition is required. Minecraft ass
 
 ## Building on Windows
 
-The GitHub Actions workflow runs from `main` and builds both `JigarzonLauncher.exe` and `Jigarzon-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
+The GitHub Actions workflow runs from `build` and builds both `JigarzonLauncher.exe` and `Jigarzon-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
 
 Jigarzon is an independent project and is not affiliated with Mojang Studios or Microsoft.
