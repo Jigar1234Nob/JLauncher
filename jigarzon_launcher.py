@@ -343,13 +343,19 @@ class Jigarzon:
         self.label(instance_row,self.selected_instance,10,CYAN,True).pack(side="left",padx=(9,0))
         self.button(instance_row,"Open mods folder",self.open_selected_mod_folder,height=30).pack(side="right")
         search=self.card(self.body);search.pack(fill="x",pady=(0,11))
-        self.label(search,"SEARCH HORIZON CONTENT",9,MUTED,True).pack(anchor="w",padx=14,pady=(12,5))
-        row=ctk.CTkFrame(search,fg_color="transparent");row.pack(fill="x",padx=13,pady=(0,12))
-        self.mod_query=ctk.CTkEntry(row,placeholder_text="Search by mod name or keyword…",height=38,fg_color=ALT,border_color=BORDER,corner_radius=8)
+        self.label(search,"SEARCH THE OFFICIAL HORIZON MODS REGISTRY",9,MUTED,True).pack(anchor="w",padx=14,pady=(12,5))
+        row=ctk.CTkFrame(search,fg_color="transparent");row.pack(fill="x",padx=13,pady=(0,8))
+        self.mod_query=ctk.CTkEntry(row,placeholder_text="Search Horizon mods, shaders, resource packs…",height=38,fg_color=ALT,border_color=BORDER,corner_radius=8)
         self.mod_query.pack(side="left",fill="x",expand=True,padx=(0,8))
         self.mod_query.bind("<Return>",lambda _event:self.search_mods())
         self.button(row,"⌕  Search",self.search_mods,True,height=38).pack(side="left")
         self.button(row,"Installed",self.list_mods,height=38).pack(side="left",padx=(7,0))
+        filters=ctk.CTkFrame(search,fg_color="transparent");filters.pack(fill="x",padx=13,pady=(0,11))
+        self.label(filters,"TYPE",9,MUTED,True).pack(side="left",padx=(0,8))
+        self.mod_kind=tk.StringVar(value="Mods")
+        self.mod_kind_menu=ctk.CTkOptionMenu(filters,variable=self.mod_kind,values=["Mods","Modpacks","Resource packs","Shader packs","Data packs"],width=155,height=31,fg_color=ALT,button_color=PURPLE,button_hover_color="#7659D8",dropdown_fg_color=PANEL)
+        self.mod_kind_menu.pack(side="left")
+        self.button(filters,"Open official website ↗",lambda:webbrowser.open("https://playhorizon.dev/mods"),height=31).pack(side="right")
         self.drop_hint=self.label(self.body,"You can also import a Horizon .mrpack or supported modpack ZIP by dragging it onto the app. Raw Java .jar files are not automatically compatible with Horizon.",9,MUTED,wraplength=780)
         self.drop_hint.pack(anchor="w",padx=4,pady=(0,10))
         self.mod_list=ctk.CTkScrollableFrame(self.body,fg_color=PANEL,corner_radius=11,border_width=1,border_color=BORDER)
@@ -404,29 +410,43 @@ class Jigarzon:
         if not hasattr(self,"mod_list") or not self.mod_list.winfo_exists():return
         for w in self.mod_list.winfo_children():w.destroy()
         try:
-            d=json.loads(out);items=d if isinstance(d,list) else d.get("results",d.get("mods",d.get("items",[])))
+            d=json.loads(out)
+            items=d if isinstance(d,list) else d.get("results",d.get("projects",d.get("mods",d.get("items",[]))))
             if not isinstance(items,list):items=[]
         except Exception:items=[]
-        if not items:self.label(self.mod_list,"No results returned. Check Horizon's response in the activity log.",10,MUTED).pack(anchor="w",padx=13,pady=15);return
+        if not items:
+            self.label(self.mod_list,"No matching Horizon projects were returned. Try another search or open the official catalogue.",10,MUTED,wraplength=740).pack(anchor="w",padx=13,pady=15)
+            return
         for item in items:
             if isinstance(item,dict):
-                name=item.get("name") or item.get("title") or item.get("id") or item.get("slug") or "Mod";slug=item.get("slug") or item.get("id") or item.get("project_id") or name
-                desc=item.get("summary") or item.get("description") or item.get("author") or ""
-            else:name=str(item);slug=name;desc=""
+                name=item.get("name") or item.get("title") or item.get("id") or item.get("slug") or "Horizon project"
+                slug=item.get("slug") or item.get("id") or item.get("project_id") or name
+                desc=item.get("summary") or item.get("description") or ""
+                author=item.get("author") or item.get("authors") or ""
+                downloads=item.get("downloads")
+                kind=item.get("kind") or item.get("type") or item.get("project_type") or ""
+                version=item.get("version") or item.get("latest_version") or ""
+                details=" · ".join(str(x) for x in (kind,("by "+str(author)) if author else "",(str(downloads)+" downloads") if downloads is not None else "",("v"+str(version)) if version else "") if x)
+            else:name=str(item);slug=name;desc="";details=""
             r=ctk.CTkFrame(self.mod_list,fg_color=ALT,corner_radius=8,border_width=1,border_color=BORDER);r.pack(fill="x",padx=6,pady=4)
-            self.label(r,name,11,TEXT,True).pack(anchor="w",padx=11,pady=(8,1));self.label(r,str(desc)[:200],9,MUTED,wraplength=730).pack(anchor="w",padx=11,pady=(0,6))
+            self.label(r,name,11,TEXT,True).pack(anchor="w",padx=11,pady=(8,1))
+            if details:self.label(r,details,8,CYAN).pack(anchor="w",padx=11,pady=(0,2))
+            self.label(r,str(desc)[:240] or "Listed in the official Horizon mods registry.",9,MUTED,wraplength=730).pack(anchor="w",padx=11,pady=(0,6))
             if not installed:
                 self.button(r,"Install",lambda ident=str(slug):self.install_mod(ident),True,height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
             else:
                 self.button(r,"Remove",lambda ident=str(slug):self.remove_mod(ident),height=29,width=78).pack(anchor="e",padx=9,pady=(0,7))
     def search_mods(self):
         q=self.mod_query.get().strip()
-        if q:self.command(["mods","search",q],"Searching mods",lambda out:self.show_mod_output(out),True)
-        else:messagebox.showinfo(APP,"Enter a mod name to search.")
-    def list_mods(self):self.command(["mods","list","--instance",self.selected_instance],"Loading installed mods",lambda out:self.show_mod_output(out,True),True)
+        kinds={"Mods":"mod","Modpacks":"modpack","Resource packs":"resource","Shader packs":"shader","Data packs":"datapack"}
+        kind=kinds.get(self.mod_kind.get(),"mod")
+        args=["mods","search",q,"--source","horizon","--kind",kind] if q else ["mods","search","--source","horizon","--kind",kind]
+        self.command(args,"Searching Horizon "+self.mod_kind.get().lower(),lambda out:self.show_mod_output(out),True)
+    def list_mods(self):self.command(["mods","list","--instance",self.selected_instance],"Loading installed Horizon content",lambda out:self.show_mod_output(out,True),True)
     def install_mod(self,slug):
-        if messagebox.askyesno(APP,"Install "+slug+" into "+self.selected_instance+"?"):
-            self.command(["mods","install",slug,"--instance",self.selected_instance],"Installing "+slug,lambda _:self.list_mods())
+        warning="Install "+slug+" from Horizon's official registry into "+self.selected_instance+"?\n\nHorizon verifies downloaded files against the registry before installing. Native mods are not sandboxed and can run code on your computer. Only install projects you trust."
+        if messagebox.askyesno(APP,warning):
+            self.command(["mods","install",slug,"--source","horizon","--instance",self.selected_instance],"Installing Horizon project "+slug,lambda _:self.list_mods())
     def remove_mod(self,slug):
         if messagebox.askyesno(APP,"Remove "+slug+" from "+self.selected_instance+"?"):
             self.command(["mods","remove",slug,"--instance",self.selected_instance],"Removing "+slug,lambda _:self.list_mods())
