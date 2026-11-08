@@ -89,8 +89,10 @@ def launcher_update_asset(assets):
     if system == "windows":
         # Prefer architecture-specific packages, then accept the current
         # universal Windows installer used by existing Jigarzon releases.
-        names = (["Jigarzon-Setup-Windows-arm64.exe", "Jigarzon-Setup-arm64.exe"] if arm64 else
-                 ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
+        # Use the stable public Windows installer name, retaining older names as fallbacks.
+        names = ["Jigarzon-Setup-Windows.exe"]
+        names += (["Jigarzon-Setup-Windows-arm64.exe", "Jigarzon-Setup-arm64.exe"] if arm64 else
+                  ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
         names += ["Jigarzon-Setup.exe"]
     else:
         # Jigarzon is currently packaged for Windows only. Never download a
@@ -534,7 +536,7 @@ class Jigarzon:
         keep=messagebox.askyesno(APP,"Keep Horizon and Minecraft game files?\\n\\nYES keeps the Horizon installation, worlds and downloaded game files.\\nNO removes the Horizon folder as well.")
         uninstaller=Path(sys.executable).resolve().parent/"unins000.exe"
         if not uninstaller.is_file():
-            messagebox.showerror(APP,"The Inno Setup uninstaller was not found. Install Jigarzon using Jigarzon-Setup.exe first.")
+            messagebox.showerror(APP,"The Inno Setup uninstaller was not found. Install Jigarzon using Jigarzon-Setup-Windows.exe first.")
             return
         if not messagebox.askyesno(APP,"Uninstall Jigarzon Launcher now?"):return
         # Reset first-run progress before uninstalling. The settings file lives
