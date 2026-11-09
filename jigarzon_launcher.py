@@ -10,7 +10,7 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 
 APP = "JLauncher"
 APP_VERSION = os.getenv("JLAUNCHER_BUILD_VERSION", "3.0.0")
-APP_RELEASES = "https://api.github.com/repos/Jigar1234Nob/jigarzon-launcher/releases/latest"
+APP_RELEASES = "https://api.github.com/repos/Jigar1234Nob/JLauncher/releases/latest"
 HORIZON_README = "https://raw.githubusercontent.com/horizon-rust/horizon/main/README.md"
 DISCORD_APP_ID = os.getenv("JLAUNCHER_DISCORD_APP_ID", "").strip()
 BG, SIDE, PANEL, ALT, BORDER = "#17191F", "#111319", "#20242D", "#292F3A", "#343C49"
