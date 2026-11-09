@@ -293,7 +293,7 @@ class JLauncher:
         if not hasattr(self,"account_name_label") or not self.account_name_label.winfo_exists():return
         self.account_name_label.configure(text=self.account_name or "Not signed in",
                                           text_color=CYAN if self.account_name else MUTED)
-        if self.account_name and self.account_type != "offline":
+        if self.account_name and self.account_type == "microsoft":
             self.logout_button.pack(side="left")
         else:
             self.logout_button.pack_forget()
@@ -365,6 +365,7 @@ class JLauncher:
     def account_selection_done(self,name):
         self.account_name=name
         self.account_uuid=""
+        self.account_type="unknown"
         self.save()
         self.update_account_ui()
         self.log("Selected Horizon account: "+name)
