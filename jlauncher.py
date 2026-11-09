@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 from pathlib import Path
 import tkinter as tk
 import webbrowser
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
@@ -151,6 +151,7 @@ class JLauncher:
         self.startup_account_checked = False
         self.account_name = ""
         self.account_uuid = ""
+        self.account_type = str(saved.get("account_type", "microsoft"))
         self.mod_install_attempts = {}
         self.mod_install_kinds = {}
         self.build()
@@ -228,7 +229,7 @@ class JLauncher:
         except tk.TclError: pass
 
     def save(self):
-        save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "selected_instance": self.selected_instance, "setup_complete": self.setup_complete, "setup_step": self.setup_step, "stats_for_nerds": self.stats_enabled})
+        save_settings({"horizon_path": self.exe.get(), "version": self.version.get(), "selected_instance": self.selected_instance, "setup_complete": self.setup_complete, "setup_step": self.setup_step, "stats_for_nerds": self.stats_enabled, "account_type": self.account_type})
 
     def label(self, p, text, size=11, color=TEXT, bold=False, **kw):
         return ctk.CTkLabel(p, text=text, text_color=color, font=("Segoe UI", size, "bold" if bold else "normal"),
@@ -279,6 +280,10 @@ class JLauncher:
         account_box.pack(side="right",padx=(0,12),pady=9)
         self.account_name_label=self.label(account_box,"Not signed in",9,MUTED,True)
         self.account_name_label.pack(side="left",padx=(0,8))
+        self.offline_button=self.button(account_box,"Add offline",self.add_offline_account,height=30)
+        self.offline_button.pack(side="left",padx=(0,5))
+        self.select_account_button=self.button(account_box,"Select",self.select_account,height=30)
+        self.select_account_button.pack(side="left",padx=(0,5))
         self.logout_button=self.button(account_box,"Log out",self.logout_account,height=30)
         self.body=ctk.CTkScrollableFrame(main,fg_color="transparent",corner_radius=0);self.body.pack(fill="both",expand=True,padx=27,pady=(0,18))
         self.page("Home")
@@ -288,7 +293,7 @@ class JLauncher:
         if not hasattr(self,"account_name_label") or not self.account_name_label.winfo_exists():return
         self.account_name_label.configure(text=self.account_name or "Not signed in",
                                           text_color=CYAN if self.account_name else MUTED)
-        if self.account_name:
+        if self.account_name and self.account_type != "offline":
             self.logout_button.pack(side="left")
         else:
             self.logout_button.pack_forget()
@@ -313,14 +318,56 @@ class JLauncher:
         if selected:
             self.account_name=str(selected.get("name") or selected.get("username") or selected.get("gamertag"))
             self.account_uuid=str(selected.get("uuid") or selected.get("id") or "")
+            account_kind=str(selected.get("type") or selected.get("provider") or selected.get("auth_type") or "").lower()
+            if selected.get("offline") is True or "offline" in account_kind:
+                self.account_type="offline"
+            elif account_kind:
+                self.account_type="microsoft"
         else:
             self.account_name=""
             self.account_uuid=""
+            self.account_type="microsoft"
         self.update_account_ui()
         return bool(selected)
 
     def check_account(self):
-        self.command(["account","list"],"Loading Microsoft account",None,True)
+        self.command(["account","list"],"Loading Horizon account",None,True)
+
+    def add_offline_account(self):
+        name=simpledialog.askstring("Add offline profile","Enter an offline player name (1-16 letters, numbers or underscores):",parent=self.root)
+        if name is None:return
+        name=name.strip()
+        if not re.fullmatch(r"[A-Za-z0-9_]{1,16}",name):
+            messagebox.showerror(APP,"Offline names must be 1-16 characters and contain only letters, numbers or underscores.")
+            return
+        self.command(["account","offline",name],"Creating offline profile "+name,
+                     lambda _out:self.command(["account","select",name],"Selecting offline profile "+name,
+                                              lambda __out:self.offline_account_selected(name)))
+
+    def offline_account_selected(self,name):
+        self.account_name=name
+        self.account_uuid=""
+        self.account_type="offline"
+        self.setup_step=max(self.setup_step,1)
+        self.save()
+        self.update_account_ui()
+        self.log("Offline profile selected: "+name)
+        if not self.setup_complete:self.page("Tutorial")
+
+    def select_account(self):
+        name=simpledialog.askstring("Select Horizon account","Enter the exact name of the account to select:",parent=self.root)
+        if name is None:return
+        name=name.strip()
+        if not name:return
+        self.command(["account","select",name],"Selecting account "+name,
+                     lambda _out:self.account_selection_done(name))
+
+    def account_selection_done(self,name):
+        self.account_name=name
+        self.account_uuid=""
+        self.save()
+        self.update_account_ui()
+        self.log("Selected Horizon account: "+name)
 
     def logout_account(self):
         if not self.account_name:return
@@ -332,6 +379,7 @@ class JLauncher:
     def account_signed_out(self,_out):
         self.account_name=""
         self.account_uuid=""
+        self.account_type="microsoft"
         self.setup_complete=False
         self.setup_step=0
         self.save()
@@ -440,11 +488,12 @@ class JLauncher:
         self.label(c,"FIRST-TIME SETUP",9,CYAN,True).pack(anchor="w",padx=21,pady=(20,5))
         self.label(c,"Let's get Minecraft ready.",22,TEXT,True).pack(anchor="w",padx=21)
         self.label(c,"Complete these steps in order. JLauncher stays locked until all three are finished.",10,MUTED,wraplength=720).pack(anchor="w",padx=21,pady=(5,16))
-        for n,title,desc,done in [("1","Sign in with Microsoft","Use an account that owns Minecraft: Java Edition.",self.setup_step>=1),("2","Install latest Horizon","Download the newest nightly build.",self.setup_step>=2),("3","Download game files","Fetch and verify required files from Mojang.",self.setup_step>=3)]:
+        for n,title,desc,done in [("1","Choose an account","Sign in with Microsoft or create an offline profile.",self.setup_step>=1),("2","Install latest Horizon","Download the newest nightly build.",self.setup_step>=2),("3","Download game files","Fetch and verify required files from Mojang.",self.setup_step>=3)]:
             r=ctk.CTkFrame(c,fg_color=ALT,corner_radius=9,border_width=1,border_color=BORDER);r.pack(fill="x",padx=17,pady=5)
             self.label(r,("✓  " if done else n+"  ")+title,11,GREEN if done else TEXT,True).pack(anchor="w",padx=12,pady=(9,2))
             self.label(r,desc,9,MUTED).pack(anchor="w",padx=12,pady=(0,9))
         self.setup_action=self.button(c,"SIGN IN WITH MICROSOFT",self.setup_signin,True,height=43);self.setup_action.pack(fill="x",padx=17,pady=(14,8))
+        self.button(c,"CREATE / SELECT OFFLINE PROFILE",self.add_offline_account,height=36).pack(fill="x",padx=17,pady=(0,9))
         if self.setup_step==1:self.setup_action.configure(text="INSTALL LATEST HORIZON",command=self.setup_install)
         elif self.setup_step==2:self.setup_action.configure(text="DOWNLOAD GAME FILES",command=self.setup_prepare)
         elif self.setup_step>=3:self.setup_action.configure(text="OPEN JLAUNCHER",command=self.finish_setup)
