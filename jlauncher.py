@@ -19,7 +19,10 @@ RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=
 ctk.set_appearance_mode("dark")
 
 def data_dir():
-    p = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / JigarzonLauncher
+    base = Path(os.getenv("LOCALAPPDATA", str(Path.home())))
+    legacy = base / "JigarzonLauncher"
+    p = base / "JLauncher"
+    if not p.exists() and legacy.exists(): legacy.rename(p)
     p.mkdir(parents=True, exist_ok=True)
     return p
 
