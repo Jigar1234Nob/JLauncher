@@ -126,8 +126,11 @@ def launcher_update_asset(assets):
                   ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
         names += ["Jigarzon-Setup.exe"]
     elif system == "darwin":
-        names = ["Jigarzon-Setup-macOS.dmg", "Jigarzon-macOS.dmg",
-                 "Jigarzon-Setup-macOS.zip", "Jigarzon-macOS.zip"]
+        arm64 = machine in ("arm64", "aarch64")
+        arch_names = (["Apple-Silicon", "arm64", "ARM64"] if arm64 else ["Intel", "x64", "x86_64"])
+        names = [f"Jigarzon-Setup-macOS-{arch}.dmg" for arch in arch_names]
+        names += [f"Jigarzon-macOS-{arch}.zip" for arch in arch_names]
+        names += ["Jigarzon-Setup-macOS.dmg", "Jigarzon-macOS.dmg"]
     else:
         return None
     return next((a for name in names for a in assets if a.get("name") == name), None)
@@ -757,7 +760,8 @@ class Jigarzon:
                 with urllib.request.urlopen(req,timeout=20) as response:release=json.loads(response.read().decode("utf-8"))
                 asset=launcher_update_asset(release.get("assets",[]))
                 if not asset:raise RuntimeError("There is no Jigarzon installer published for this operating system and architecture yet.")
-                target=data_dir()/"Jigarzon-Setup-reinstall.exe"
+                suffix = ".dmg" if asset["name"].lower().endswith(".dmg") else (".zip" if asset["name"].lower().endswith(".zip") else ".exe")
+                target=data_dir()/("Jigarzon-Setup-reinstall"+suffix)
                 req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
                 with urllib.request.urlopen(req,timeout=90) as response,target.open("wb") as out:
                     while True:
