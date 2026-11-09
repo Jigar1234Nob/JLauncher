@@ -76,15 +76,15 @@ jobs:
           PACKAGE="JLauncher-linux-${LINUX_ARCH}"
           mkdir -p "dist/${PACKAGE}"
           cp -a dist/JLauncher "dist/${PACKAGE}/"
-          cat > "dist/${PACKAGE}/run-jigarzon.sh" <<'SH'
+          cat > "dist/${PACKAGE}/run-jlauncher.sh" <<'SH'
           #!/usr/bin/env bash
           HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
           exec "$HERE/JLauncher/JLauncher" "$@"
           SH
-          chmod +x "dist/${PACKAGE}/run-jigarzon.sh"
+          chmod +x "dist/${PACKAGE}/run-jlauncher.sh"
           cat > "dist/${PACKAGE}/README.txt" <<TXT
           JLauncher for Linux (${LINUX_ARCH})
-          Run ./run-jigarzon.sh to start.
+          Run ./run-jlauncher.sh to start.
           Requires a graphical Linux desktop with X11 or XWayland.
           Note: Horizon currently publishes an official Linux x86_64 launcher only.
           TXT
