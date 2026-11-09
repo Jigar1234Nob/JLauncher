@@ -8,7 +8,7 @@
   <strong>A cleaner way to manage Horizon and Minecraft: Java Edition on macOS.</strong>
 </p>
 
-JLauncher is a desktop companion for Horizon, the Rust-based Minecraft: Java Edition client. It brings account sign-in, game setup, instance management, and supported mod workflows into one interface.
+JLauncher is a desktop companion for Horizon, the Rust-based Minecraft: Java Edition client. It brings account sign-in, game setup, instance management, and supported mod features into one interface.
 
 ## Features
 
