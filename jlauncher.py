@@ -27,7 +27,9 @@ def data_dir():
         base = Path.home() / "Library" / "Application Support"
     else:
         base = Path(os.getenv("LOCALAPPDATA", str(Path.home())))
-    p = base / JigarzonLauncher
+    legacy = base / "JigarzonLauncher"
+    p = base / "JLauncher"
+    if not p.exists() and legacy.exists(): legacy.rename(p)
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -238,7 +240,7 @@ class JLauncher:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Exit", self.tray_exit)
             )
-            self.tray_icon=pystray.Icon(JigarzonLauncher,self.tray_image(),APP,menu)
+            self.tray_icon=pystray.Icon("JLauncher",self.tray_image(),APP,menu)
             self.tray_icon.run_detached()
             self.tray_available=True
         except Exception as e:
