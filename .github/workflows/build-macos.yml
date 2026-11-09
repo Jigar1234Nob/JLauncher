@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-14
+          - runner: macos-15
             arch: Apple-Silicon
           - runner: macos-15-intel
             arch: Intel
@@ -47,7 +47,7 @@ jobs:
               poly([(148,44),(210,87),(210,192),(252,192),(210,239),(148,239)], "#16BFEA")
               poly([(133,18),(148,44),(148,239),(133,221)], "#5638E8")
               im.save(out / f"icon_{size}x{size}.png")
-              if size <= 256:
+              if size <= 512:
                   im.resize((size*2,size*2), Image.Resampling.LANCZOS).save(out / f"icon_{size}x{size}@2x.png")
           PY
           iconutil -c icns assets/Jigarzon.iconset -o assets/jigarzon.icns
