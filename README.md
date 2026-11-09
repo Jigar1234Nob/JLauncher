@@ -5,10 +5,10 @@
 <h1 align="center">Jigarzon Launcher</h1>
 
 <p align="center">
-  A Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+  A desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
 </p>
 
-Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+Jigarzon Launcher is a desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
 
 ## Features
 
@@ -18,8 +18,8 @@ Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Mine
 - Reads the current Minecraft Java Edition version from Horizon's official project information (currently 26.3).
 - Home dashboard with the Jigarzon v2.00 release announcement and the current Horizon build label.
 - Prism-inspired dark interface with the JL purple/cyan identity.
-- Windows application icon, taskbar icon and Inno Setup installer branding.
-- System-tray support: closing the window keeps Jigarzon running in the notification area; the tray menu can reopen the launcher, launch the selected instance, or fully exit.
+- Branded Windows and macOS application icons and platform-specific packages.
+- System-tray support: closing the window keeps Jigarzon running in the notification area/menu bar; the tray menu can reopen the launcher, launch the selected instance, or fully exit.
 - Per-user Windows installer with Start Menu and optional desktop shortcuts.
 - Instance manager to create, select, rename, reinstall and delete instances.
 - Mod browser for Horizon-compatible content.
@@ -34,8 +34,11 @@ Horizon does not run arbitrary Java mod JARs as-is. Its mod browser checks and p
 
 A Microsoft account that owns Minecraft: Java Edition is required. Minecraft assets are downloaded from Mojang through Horizon and are not bundled with Jigarzon.
 
-## Building on Windows
+## Platform builds
 
-The GitHub Actions workflow runs from `build` and builds both `JigarzonLauncher.exe` and `Jigarzon-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
+- **Windows:** built from the `build` branch by `.github/workflows/build-windows.yml` using PyInstaller and Inno Setup. Output: `Jigarzon-Setup-Windows.exe`.
+- **macOS:** built separately from the `macos-build` branch by `.github/workflows/build-macos.yml`. It produces a `.dmg` and `.zip` for Apple Silicon and Intel Macs. The macOS build does not modify the Windows `build` branch.
+
+The macOS app bundle is currently unsigned and not notarized. macOS may require the user to approve opening it in Privacy & Security. Horizon itself must publish a compatible macOS CLI archive for the in-app Horizon installer to work on that Mac. Future Jigarzon releases need a matching macOS DMG asset for the in-app updater to offer macOS updates.
 
 Jigarzon is an independent project and is not affiliated with Mojang Studios or Microsoft.
