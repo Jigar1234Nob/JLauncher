@@ -20,10 +20,10 @@ jobs:
       - name: Set release version
         shell: pwsh
         run: |
-          "JIGARZON_BUILD_VERSION=2.0.0" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "JLAUNCHER_BUILD_VERSION=3.0.0" | Out-File -FilePath $env:GITHUB_ENV -Append
           $tag = "${{ github.ref_name }}"
           if ($tag -match '^v(.+)$') {
-            "JIGARZON_BUILD_VERSION=$($Matches[1])" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "JLAUNCHER_BUILD_VERSION=$($Matches[1])" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
@@ -34,7 +34,7 @@ jobs:
       - name: Build Windows application
         run: >
           python -m PyInstaller --noconfirm --clean --onefile --windowed
-          --name JigarzonLauncher --icon assets/jigarzon.ico
+          --name JLauncher --icon assets/jigarzon.ico
           --add-data "assets/jigarzon.ico;assets"
           --collect-all customtkinter --collect-all pypresence
           --collect-all tkinterdnd2 --collect-all pystray jigarzon_launcher.py
@@ -45,20 +45,20 @@ jobs:
           if (!(Test-Path $inno)) {
             throw "Inno Setup compiler not found: $inno"
           }
-          & $inno "/DAppVersion=$env:JIGARZON_BUILD_VERSION" "installer.iss"
+          & $inno "/DAppVersion=$env:JLAUNCHER_BUILD_VERSION" "installer.iss"
           if ($LASTEXITCODE -ne 0) {
             throw "Inno Setup compilation failed with exit code $LASTEXITCODE"
           }
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
-          name: Jigarzon-Launcher-Windows
+          name: JLauncher-Windows
           path: |
-            dist/JigarzonLauncher.exe
-            dist/Jigarzon-Setup-Windows.exe
+            dist/JLauncher.exe
+            dist/JLauncher-Setup-Windows.exe
           if-no-files-found: error
       - name: Publish installer on GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Jigarzon-Setup-Windows.exe
+          files: dist/JLauncher-Setup-Windows.exe
