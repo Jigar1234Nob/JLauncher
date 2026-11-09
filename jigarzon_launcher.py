@@ -9,7 +9,7 @@ import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 APP = "JLauncher"
-APP_VERSION = os.getenv("JLAUNCHER_BUILD_VERSION", "2.0.0")
+APP_VERSION = os.getenv("JLAUNCHER_BUILD_VERSION", "3.0.0")
 APP_RELEASES = "https://api.github.com/repos/Jigar1234Nob/jigarzon-launcher/releases/latest"
 HORIZON_README = "https://raw.githubusercontent.com/horizon-rust/horizon/main/README.md"
 DISCORD_APP_ID = os.getenv("JLAUNCHER_DISCORD_APP_ID", "").strip()
@@ -19,7 +19,7 @@ RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=
 ctk.set_appearance_mode("dark")
 
 def data_dir():
-    p = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / "JLauncherLauncher"
+    p = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / "JigarzonLauncher"
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -182,7 +182,7 @@ class JLauncher:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Exit", self.tray_exit)
             )
-            self.tray_icon=pystray.Icon("JLauncherLauncher",self.tray_image(),APP,menu)
+            self.tray_icon=pystray.Icon("JLauncher",self.tray_image(),APP,menu)
             self.tray_icon.run_detached()
             self.tray_available=True
         except Exception as e:
