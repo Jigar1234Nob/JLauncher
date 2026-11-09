@@ -1,7 +1,7 @@
 # JLauncher
 
 <p align="center">
-  <img src="assets/jigarzon-logo.svg" alt="JLauncher logo" width="160">
+  <img src="assets/jlauncher-logo.svg" alt="JLauncher logo" width="160">
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@ JLauncher is a Windows desktop companion for Horizon, the Rust-based Minecraft: 
 
 ## Installation and upgrades
 
-The Windows installer installs JLauncher for the current Windows user. When upgrading from the older Jigarzon Launcher installation, the installer replaces the old program folder with the JLauncher folder while retaining the legacy application-data directory so existing settings and Horizon/Minecraft files are not needlessly deleted.
+The Windows installer installs JLauncher for the current Windows user. When upgrading from the older JLauncher installation, the installer replaces the old program folder with the JLauncher folder while retaining the legacy application-data directory so existing settings and Horizon/Minecraft files are not needlessly deleted.
 
 ## Requirements
 
