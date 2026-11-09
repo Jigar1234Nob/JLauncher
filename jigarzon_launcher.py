@@ -1008,8 +1008,12 @@ class Jigarzon:
                     self.install_launcher_update(val)
                 elif kind == "reinstall_ready":
                     self.log("Latest Jigarzon installer downloaded. Starting setup.")
-                    subprocess.Popen([val])
-                    self.root.after(300,self.exit_app)
+                    if platform.system() == "Darwin":
+                        subprocess.Popen(["open", val])
+                        messagebox.showinfo(APP, "The macOS installer has been opened. Drag Jigarzon Launcher into Applications and replace the existing copy.")
+                    else:
+                        subprocess.Popen([val])
+                        self.root.after(300,self.exit_app)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
                     if label == "Checking for Horizon updates":
