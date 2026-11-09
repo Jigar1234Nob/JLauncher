@@ -8,18 +8,18 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
-APP = "Jigarzon Launcher"
-APP_VERSION = os.getenv("JIGARZON_BUILD_VERSION", "2.0.0")
+APP = "JLauncher"
+APP_VERSION = os.getenv("JLAUNCHER_BUILD_VERSION", "2.0.0")
 APP_RELEASES = "https://api.github.com/repos/Jigar1234Nob/jigarzon-launcher/releases/latest"
 HORIZON_README = "https://raw.githubusercontent.com/horizon-rust/horizon/main/README.md"
-DISCORD_APP_ID = os.getenv("JIGARZON_DISCORD_APP_ID", "").strip()
+DISCORD_APP_ID = os.getenv("JLAUNCHER_DISCORD_APP_ID", "").strip()
 BG, SIDE, PANEL, ALT, BORDER = "#17191F", "#111319", "#20242D", "#292F3A", "#343C49"
 TEXT, MUTED, PURPLE, CYAN, GREEN = "#F4F6FB", "#A1AABC", "#8B6CF6", "#63D4E6", "#63D6A0"
 RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=100"
 ctk.set_appearance_mode("dark")
 
 def data_dir():
-    p = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / "JigarzonLauncher"
+    p = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / "JLauncherLauncher"
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -43,7 +43,7 @@ def locate_horizon():
     return None
 
 def install_horizon(progress):
-    req = urllib.request.Request(RELEASES, headers={"User-Agent": "Jigarzon-Launcher", "Accept": "application/vnd.github+json"})
+    req = urllib.request.Request(RELEASES, headers={"User-Agent": "JLauncher-Launcher", "Accept": "application/vnd.github+json"})
     progress("Checking official Horizon releases…", .05)
     with urllib.request.urlopen(req, timeout=30) as r: releases = json.loads(r.read().decode())
     release = next((r for r in releases if str(r.get("tag_name", "")).startswith("launcher@")), None)
@@ -55,7 +55,7 @@ def install_horizon(progress):
     archive = data_dir() / "horizon-package.zip"
     digest, received, total = hashlib.sha256(), 0, int(asset.get("size") or 0)
     progress("Downloading Horizon " + release["tag_name"].replace("launcher@", "") + "…", .1)
-    req = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "Jigarzon-Launcher"})
+    req = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "JLauncher-Launcher"})
     with urllib.request.urlopen(req, timeout=60) as response, archive.open("wb") as out:
         while True:
             block = response.read(1024 * 1024)
@@ -90,14 +90,14 @@ def launcher_update_asset(assets):
     names = []
     if system == "windows":
         # Prefer architecture-specific packages, then accept the current
-        # universal Windows installer used by existing Jigarzon releases.
+        # universal Windows installer used by existing JLauncher releases.
         # Use the stable public Windows installer name, retaining older names as fallbacks.
-        names = ["Jigarzon-Setup-Windows.exe"]
-        names += (["Jigarzon-Setup-Windows-arm64.exe", "Jigarzon-Setup-arm64.exe"] if arm64 else
-                  ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
-        names += ["Jigarzon-Setup.exe"]
+        names = ["JLauncher-Setup-Windows.exe"]
+        names += (["JLauncher-Setup-Windows-arm64.exe", "JLauncher-Setup-arm64.exe"] if arm64 else
+                  ["JLauncher-Setup-Windows-x64.exe", "JLauncher-Setup-x64.exe"])
+        names += ["JLauncher-Setup.exe"]
     else:
-        # Jigarzon is currently packaged for Windows only. Never download a
+        # JLauncher is currently packaged for Windows only. Never download a
         # Windows installer on macOS/Linux or pretend it can update those OSes.
         return None
     return next((a for name in names for a in assets if a.get("name") == name), None)
@@ -122,7 +122,7 @@ def tags(data):
     walk(data)
     return list(dict.fromkeys(t for t in out if t and len(t) < 100))
 
-class Jigarzon:
+class JLauncher:
     def __init__(self, root):
         self.root, self.jobs, self.busy = root, queue.Queue(), False
         self.root.title(APP); self.root.geometry("1220x790"); self.root.minsize(1020, 680)
@@ -177,12 +177,12 @@ class Jigarzon:
     def start_tray_icon(self):
         try:
             menu=pystray.Menu(
-                pystray.MenuItem("Open Jigarzon", self.tray_open, default=True),
+                pystray.MenuItem("Open JLauncher", self.tray_open, default=True),
                 pystray.MenuItem("Launch selected instance", self.tray_launch_instance),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Exit", self.tray_exit)
             )
-            self.tray_icon=pystray.Icon("JigarzonLauncher",self.tray_image(),APP,menu)
+            self.tray_icon=pystray.Icon("JLauncherLauncher",self.tray_image(),APP,menu)
             self.tray_icon.run_detached()
             self.tray_available=True
         except Exception as e:
@@ -345,7 +345,7 @@ class Jigarzon:
         for w in self.body.winfo_children():w.destroy()
         for n,b in self.nav.items():b.configure(fg_color=ALT if n==name else "transparent",text_color=CYAN if n==name else TEXT)
         self.title.configure(text=name)
-        self.subtitle.configure(text={"Home":"Your Minecraft library.","Instances":"Manage separate game folders.","Mods":"Browse content for your selected instance.","Settings":"Game files and launcher preferences.","Tutorial":"Complete setup to unlock Jigarzon.","Dev Gallery":"Developer diagnostics and Horizon commands."}[name])
+        self.subtitle.configure(text={"Home":"Your Minecraft library.","Instances":"Manage separate game folders.","Mods":"Browse content for your selected instance.","Settings":"Game files and launcher preferences.","Tutorial":"Complete setup to unlock JLauncher.","Dev Gallery":"Developer diagnostics and Horizon commands."}[name])
         {"Home":self.home,"Instances":self.instances_page,"Mods":self.mods_page,"Settings":self.settings,"Tutorial":self.tutorial,"Dev Gallery":self.dev_gallery}[name]()
 
     def home(self):
@@ -366,7 +366,7 @@ class Jigarzon:
         self.button(play,"▶   PLAY MINECRAFT",self.play,True,height=47).pack(fill="x",padx=21,pady=(0,17))
         news=self.card(self.body);news.pack(fill="both",expand=True)
         self.label(news,"JIGARZON RELEASE",10,CYAN,True).pack(anchor="w",padx=19,pady=(20,7))
-        self.label(news,"Jigarzon Launcher v2.00 has released!",21,TEXT,True).pack(anchor="w",padx=19)
+        self.label(news,"JLauncher v2.00 has released!",21,TEXT,True).pack(anchor="w",padx=19)
         self.label(news,"Your Minecraft worlds, instances and mods. One launcher, with a cleaner way to play.",10,MUTED,wraplength=760).pack(anchor="w",padx=19,pady=(7,20))
 
     def instances_page(self):
@@ -436,7 +436,7 @@ class Jigarzon:
         c=self.card(self.body);c.pack(fill="x",pady=(0,10))
         self.label(c,"FIRST-TIME SETUP",9,CYAN,True).pack(anchor="w",padx=21,pady=(20,5))
         self.label(c,"Let's get Minecraft ready.",22,TEXT,True).pack(anchor="w",padx=21)
-        self.label(c,"Complete these steps in order. Jigarzon stays locked until all three are finished.",10,MUTED,wraplength=720).pack(anchor="w",padx=21,pady=(5,16))
+        self.label(c,"Complete these steps in order. JLauncher stays locked until all three are finished.",10,MUTED,wraplength=720).pack(anchor="w",padx=21,pady=(5,16))
         for n,title,desc,done in [("1","Sign in with Microsoft","Use an account that owns Minecraft: Java Edition.",self.setup_step>=1),("2","Install latest Horizon","Download the newest nightly build.",self.setup_step>=2),("3","Download game files","Fetch and verify required files from Mojang.",self.setup_step>=3)]:
             r=ctk.CTkFrame(c,fg_color=ALT,corner_radius=9,border_width=1,border_color=BORDER);r.pack(fill="x",padx=17,pady=5)
             self.label(r,("✓  " if done else n+"  ")+title,11,GREEN if done else TEXT,True).pack(anchor="w",padx=12,pady=(9,2))
@@ -451,7 +451,7 @@ class Jigarzon:
         self.console=ctk.CTkTextbox(logs,height=170,fg_color=ALT,text_color=TEXT,
                                    border_width=0,corner_radius=8,font=("Consolas",9),wrap="word")
         self.console.pack(fill="both",expand=True,padx=12,pady=(10,12))
-        self.console.insert("end","Jigarzon Launcher activity log ready.\\n")
+        self.console.insert("end","JLauncher activity log ready.\\n")
         self.console.configure(state="disabled")
     def setup_signin(self):
         self.signin_window = None
@@ -651,7 +651,7 @@ class Jigarzon:
         self.path_label=self.label(h,self.exe.get() or "Horizon is not installed yet.",9,MUTED,wraplength=740);self.path_label.pack(anchor="w",padx=17,pady=(9,9))
         buttons=ctk.CTkFrame(h,fg_color="transparent");buttons.pack(anchor="w",padx=17,pady=(0,13))
         self.button(buttons,"Download / repair Horizon",self.download_horizon,True).pack(side="left");self.button(buttons,"Choose existing EXE",self.browse).pack(side="left",padx=7)
-        a=self.card(self.body);a.pack(fill="x");self.section(a,"About Jigarzon","Independent launcher for Horizon and Minecraft Java Edition.")
+        a=self.card(self.body);a.pack(fill="x");self.section(a,"About JLauncher","Independent launcher for Horizon and Minecraft Java Edition.")
         self.label(a,"Not affiliated with Mojang Studios or Microsoft.",9,MUTED).pack(anchor="w",padx=17,pady=12)
         tools=self.card(self.body);tools.pack(fill="x",pady=(11,0))
         self.section(tools,"Developer options","Advanced diagnostics and direct Horizon CLI access.")
@@ -662,7 +662,7 @@ class Jigarzon:
         self.dev_gallery_button=self.button(tools,"OPEN DEV GALLERY  →",lambda:self.page("Dev Gallery"),height=34)
         if self.stats_enabled:self.dev_gallery_button.pack(anchor="w",padx=17,pady=(0,13))
         un=self.card(self.body);un.pack(fill="x",pady=(11,0))
-        self.section(un,"Uninstall / reinstall Jigarzon","Remove the launcher without accidentally deleting your Minecraft worlds.")
+        self.section(un,"Uninstall / reinstall JLauncher","Remove the launcher without accidentally deleting your Minecraft worlds.")
         self.label(un,"Your Horizon installation and game data are stored separately from the launcher. You can keep them when uninstalling.",9,MUTED,wraplength=740).pack(anchor="w",padx=17,pady=(8,10))
         ur=ctk.CTkFrame(un,fg_color="transparent");ur.pack(anchor="w",padx=17,pady=(0,13))
         self.button(ur,"REINSTALL JIGARZON",self.reinstall_jigarzon,True,height=36).pack(side="left")
@@ -706,9 +706,9 @@ class Jigarzon:
         keep=messagebox.askyesno(APP,"Keep Horizon and Minecraft game files?\\n\\nYES keeps the Horizon installation, worlds and downloaded game files.\\nNO removes the Horizon folder as well.")
         uninstaller=Path(sys.executable).resolve().parent/"unins000.exe"
         if not uninstaller.is_file():
-            messagebox.showerror(APP,"The Inno Setup uninstaller was not found. Install Jigarzon using Jigarzon-Setup-Windows.exe first.")
+            messagebox.showerror(APP,"The Inno Setup uninstaller was not found. Install JLauncher using JLauncher-Setup-Windows.exe first.")
             return
-        if not messagebox.askyesno(APP,"Uninstall Jigarzon Launcher now?"):return
+        if not messagebox.askyesno(APP,"Uninstall JLauncher now?"):return
         # Reset first-run progress before uninstalling. The settings file lives
         # outside the install directory and is intentionally preserved by Inno Setup.
         self.setup_complete = False
@@ -720,15 +720,15 @@ class Jigarzon:
         subprocess.Popen([str(uninstaller),"/SILENT"])
         self.root.after(300,self.exit_app)
     def reinstall_jigarzon(self):
-        if not messagebox.askyesno(APP,"Download and install the latest published Jigarzon release?"):return
+        if not messagebox.askyesno(APP,"Download and install the latest published JLauncher release?"):return
         def work():
             try:
-                req=urllib.request.Request(APP_RELEASES,headers={"User-Agent":"Jigarzon-Launcher","Accept":"application/vnd.github+json"})
+                req=urllib.request.Request(APP_RELEASES,headers={"User-Agent":"JLauncher-Launcher","Accept":"application/vnd.github+json"})
                 with urllib.request.urlopen(req,timeout=20) as response:release=json.loads(response.read().decode("utf-8"))
                 asset=launcher_update_asset(release.get("assets",[]))
-                if not asset:raise RuntimeError("There is no Jigarzon installer published for this operating system and architecture yet.")
-                target=data_dir()/"Jigarzon-Setup-reinstall.exe"
-                req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
+                if not asset:raise RuntimeError("There is no JLauncher installer published for this operating system and architecture yet.")
+                target=data_dir()/"JLauncher-Setup-reinstall.exe"
+                req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"JLauncher-Launcher"})
                 with urllib.request.urlopen(req,timeout=90) as response,target.open("wb") as out:
                     while True:
                         block=response.read(1024*1024)
@@ -759,7 +759,7 @@ class Jigarzon:
     def check_horizon_game_version(self):
         def work():
             try:
-                req=urllib.request.Request(HORIZON_README,headers={"User-Agent":"Jigarzon-Launcher"})
+                req=urllib.request.Request(HORIZON_README,headers={"User-Agent":"JLauncher-Launcher"})
                 with urllib.request.urlopen(req,timeout=12) as response: body=response.read().decode("utf-8","replace")
                 match=re.search(r"Minecraft: Java Edition\s+(\d+\.\d+)",body)
                 if match:self.jobs.put(("game_version",match.group(1)))
@@ -769,7 +769,7 @@ class Jigarzon:
     def check_launcher_update(self):
         def work():
             try:
-                req=urllib.request.Request(APP_RELEASES,headers={"User-Agent":"Jigarzon-Launcher","Accept":"application/vnd.github+json"})
+                req=urllib.request.Request(APP_RELEASES,headers={"User-Agent":"JLauncher-Launcher","Accept":"application/vnd.github+json"})
                 with urllib.request.urlopen(req,timeout=15) as response: release=json.loads(response.read().decode("utf-8"))
                 tag=str(release.get("tag_name","")).lstrip("v")
                 def version_tuple(v):
@@ -778,11 +778,11 @@ class Jigarzon:
                 if version_tuple(tag)<=version_tuple(APP_VERSION):return
                 asset=launcher_update_asset(release.get("assets",[]))
                 if not asset:
-                    self.jobs.put(("log","Jigarzon "+tag+" is available, but this release has no installer for "+platform.system()+" ("+platform.machine()+"). Keeping the current version."))
+                    self.jobs.put(("log","JLauncher "+tag+" is available, but this release has no installer for "+platform.system()+" ("+platform.machine()+"). Keeping the current version."))
                     return
-                self.jobs.put(("log","Jigarzon Launcher update "+tag+" found. Downloading installer…"))
-                req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
-                installer=data_dir()/"Jigarzon-Setup-update.exe"
+                self.jobs.put(("log","JLauncher update "+tag+" found. Downloading installer…"))
+                req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"JLauncher-Launcher"})
+                installer=data_dir()/"JLauncher-Setup-update.exe"
                 digest=hashlib.sha256()
                 with urllib.request.urlopen(req,timeout=60) as response,installer.open("wb") as out:
                     while True:
@@ -795,7 +795,7 @@ class Jigarzon:
                 self.jobs.put(("launcher_update_ready",str(installer)))
             except Exception as e:
                 # No published release yet is normal for a source checkout.
-                if "HTTP Error 404" not in str(e):self.jobs.put(("log","Jigarzon update check: "+str(e)))
+                if "HTTP Error 404" not in str(e):self.jobs.put(("log","JLauncher update check: "+str(e)))
             finally:
                 self.jobs.put(("launcher_update_checked", True))
         threading.Thread(target=work,daemon=True).start()
@@ -806,7 +806,7 @@ class Jigarzon:
                 raise RuntimeError("Automatic installation is currently supported only on Windows. A matching installer was downloaded to: "+installer)
             subprocess.Popen([installer,"/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CLOSEAPPLICATIONS","/RESTARTAPPLICATIONS"])
             self.root.after(300,self.exit_app)
-        except Exception as e:messagebox.showerror(APP,"Could not start the Jigarzon update installer:\\n\\n"+str(e))
+        except Exception as e:messagebox.showerror(APP,"Could not start the JLauncher update installer:\\n\\n"+str(e))
 
     def set_window_icon(self,window):
         try:
@@ -850,7 +850,7 @@ class Jigarzon:
                 if label == "Opening Microsoft sign-in":
                     webbrowser.open("https://www.microsoft.com/link")
                 if label.startswith("Playing Minecraft "):
-                    version = label[len("Playing Minecraft "):].removesuffix(" using Jigarzon Launcher")
+                    version = label[len("Playing Minecraft "):].removesuffix(" using JLauncher")
                     self.game_active = True; self.jobs.put(("discord", version))
                 lines = []
                 for line in proc.stdout:
@@ -903,19 +903,19 @@ class Jigarzon:
             self.page("Tutorial")
             return
         self.command(["play", "--instance", self.selected_instance],
-                     "Playing Minecraft latest using Jigarzon Launcher")
+                     "Playing Minecraft latest using JLauncher")
 
     def discord_start(self, version):
         appid = DISCORD_APP_ID
-        if not appid: self.log("Discord Rich Presence is waiting for the Jigarzon Discord Application ID to be configured in the build."); return
+        if not appid: self.log("Discord Rich Presence is waiting for the JLauncher Discord Application ID to be configured in the build."); return
         def connect():
             rpc = None
             try:
                 from pypresence import Presence
                 rpc = Presence(appid); rpc.connect()
                 if not self.game_active: rpc.close(); return
-                rpc.update(details="Playing Minecraft " + version + " using Jigarzon Launcher",
-                           state="Minecraft Java Edition", large_text="Jigarzon Launcher")
+                rpc.update(details="Playing Minecraft " + version + " using JLauncher",
+                           state="Minecraft Java Edition", large_text="JLauncher")
                 self.rpc = rpc; self.jobs.put(("log", "Discord Rich Presence connected."))
             except Exception as e:
                 if rpc:
@@ -966,10 +966,10 @@ class Jigarzon:
                 elif kind == "launcher_update_checked":
                     self.launcher_update_checked = True
                 elif kind == "launcher_update_ready":
-                    self.log("A newer Jigarzon version is ready. Starting the installer.")
+                    self.log("A newer JLauncher version is ready. Starting the installer.")
                     self.install_launcher_update(val)
                 elif kind == "reinstall_ready":
-                    self.log("Latest Jigarzon installer downloaded. Starting setup.")
+                    self.log("Latest JLauncher installer downloaded. Starting setup.")
                     subprocess.Popen([val])
                     self.root.after(300,self.exit_app)
                 elif kind == "result":
@@ -1038,10 +1038,10 @@ def main():
     ctk.CTkLabel(frame, text="JIGARZON", font=("Segoe UI", 24, "bold"), text_color=TEXT).pack()
     ctk.CTkLabel(frame, text="A better way into your next world.", font=("Segoe UI", 11), text_color=MUTED).pack(pady=(3, 24))
     bar=ctk.CTkProgressBar(frame, width=390, height=8, corner_radius=8, progress_color=PURPLE, fg_color=ALT); bar.pack(pady=(0, 13)); bar.set(.04)
-    label=ctk.CTkLabel(frame, text="Starting Jigarzon…", font=("Segoe UI", 10), text_color=MUTED); label.pack()
+    label=ctk.CTkLabel(frame, text="Starting JLauncher…", font=("Segoe UI", 10), text_color=MUTED); label.pack()
     splash.attributes("-topmost", True)
     splash.lift()
-    app=Jigarzon(root)
+    app=JLauncher(root)
     app.set_window_icon(splash)
     splash_started=__import__("time").monotonic()
     def watch():
@@ -1049,7 +1049,7 @@ def main():
         splash.attributes("-topmost", True)
         splash.lift()
         if not app.launcher_update_checked:
-            label.configure(text="Checking for Jigarzon updates…")
+            label.configure(text="Checking for JLauncher updates…")
         elif not app.horizon_startup_checked:
             label.configure(text="Checking for Horizon updates…")
         elif not app.startup_account_checked:
@@ -1060,7 +1060,7 @@ def main():
         # Keep the splash visible above other windows until all startup checks
         # and any available launcher/Horizon updates have finished.
         if elapsed>=7.0 and app.launcher_update_checked and app.horizon_startup_checked and app.startup_account_checked:
-            bar.set(1); label.configure(text="Jigarzon is ready")
+            bar.set(1); label.configure(text="JLauncher is ready")
             finish(); return
         root.after(150, watch)
     def finish():
