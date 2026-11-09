@@ -51,25 +51,25 @@ jobs:
                   im.resize((size*2,size*2), Image.Resampling.LANCZOS).save(out / f"icon_{size}x{size}@2x.png")
           PY
           iconutil -c icns assets/JLauncher.iconset -o assets/jlauncher.icns
-      - name: Build macOS application bundle
+      - name: Build JLauncher application bundle
         run: |
           python -m PyInstaller --noconfirm --clean --windowed --onedir \
             --name JLauncher \
-            --osx-bundle-identifier au.jigar.jlauncherlauncher \
+            --osx-bundle-identifier au.jigar.jlauncher \
             --icon assets/jlauncher.icns \
             --collect-all customtkinter \
             --collect-all pypresence \
             --collect-all tkinterdnd2 \
             --collect-all pystray \
-            jlauncher_launcher.py
-      - name: Package DMG and ZIP
+            jlauncher.py
+      - name: Package JLauncher DMG and ZIP
         run: |
           mkdir -p staging
           ditto dist/JLauncher.app staging/JLauncher.app
           ln -s /Applications staging/Applications
           hdiutil create -volname "JLauncher" -srcfolder staging -ov -format UDZO "dist/JLauncher-Setup-macOS-${{ matrix.arch }}.dmg"
           ditto -c -k --sequesterRsrc --keepParent dist/JLauncher.app "dist/JLauncher-macOS-${{ matrix.arch }}.zip"
-      - name: Upload macOS build
+      - name: Upload JLauncher for macOS
         uses: actions/upload-artifact@v4
         with:
           name: JLauncher-macOS-${{ matrix.arch }}
