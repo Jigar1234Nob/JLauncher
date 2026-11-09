@@ -32,7 +32,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [InstallDelete]
-; Remove the previous Jigarzon program folder and Start Menu group on upgrade.
+; Remove the previous legacy program folder and Start Menu group on upgrade.
 Type: filesandordirs; Name: "{localappdata}\Programs\Jigarzon Launcher"
 Type: filesandordirs; Name: "{userprograms}\Jigarzon Launcher"
 
