@@ -40,7 +40,7 @@ def save_settings(value):
 
 def horizon_executable_names():
     if platform.system() == "Linux":
-        return ("horizon-launcher",)
+        return ("horizon-launcher.AppImage", "horizon-launcher")
     if platform.system() == "Darwin":
         return ("horizon-launcher", "horizon")
     return ("horizon-launcher.exe",)
@@ -77,7 +77,7 @@ def install_horizon(progress):
             raise RuntimeError("The official Horizon release is missing horizon-launcher-linux-x86_64.AppImage.")
         target = data_dir() / "Horizon"
         target.mkdir(parents=True, exist_ok=True)
-        executable = target / "horizon-launcher"
+        executable = target / "horizon-launcher.AppImage"
         progress("Downloading the official Horizon Linux AppImage…", .1)
         req = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "Jigarzon-Launcher"})
         digest, received, total = hashlib.sha256(), 0, int(asset.get("size") or 0)
@@ -610,7 +610,7 @@ class Jigarzon:
     def on_drop(self,event):
         try:paths=[Path(p.strip("{}")) for p in self.root.tk.splitlist(event.data)]
         except Exception:
-            messagebox.showwarning(APP,"Windows did not provide a readable dropped file path.")
+            messagebox.showwarning(APP,"The desktop did not provide a readable dropped file path.")
             return
         if not paths:return
         accepted=[p for p in paths if p.is_file() and p.suffix.lower() in (".mrpack",".zip")]
@@ -918,7 +918,10 @@ class Jigarzon:
         exe = self.require_exe()
         if not exe or self.busy: return
         self.busy = True; self.save(); self.set_status(label, True); self.log("\n[" + label + "]")
-        cmd = [str(exe), "--json"] + args if json_output else [str(exe)] + args
+        if platform.system() == "Linux" and exe.name.lower().endswith(".appimage"):
+            cmd = [str(exe), "--appimage-extract-and-run"] + (["--json"] if json_output else []) + args
+        else:
+            cmd = [str(exe), "--json"] + args if json_output else [str(exe)] + args
         def work():
             try:
                 proc = subprocess.Popen(cmd, cwd=str(exe.parent), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
