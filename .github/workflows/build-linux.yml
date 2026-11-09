@@ -1,4 +1,4 @@
-name: Build Linux Packages
+name: Build JLauncher for Linux
 
 on:
   push:
@@ -36,8 +36,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dpkg-dev libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxfixes3 libxcb1 libxkbcommon0 libglib2.0-0 libfontconfig1 libfreetype6 libdbus-1-3
 
-      - name: Set package version
-        run: echo "JIGARZON_BUILD_VERSION=2.0.0" >> "$GITHUB_ENV"
+      - name: Set JLauncher package version
+        run: echo "JLAUNCHER_BUILD_VERSION=3.0.0" >> "$GITHUB_ENV"
 
       - name: Install Python dependencies
         run: |
@@ -54,41 +54,41 @@ jobs:
           d.polygon([(50,172),(266,36),(266,388),(156,478),(36,478),(156,376),(156,176)], fill="#A33BFF")
           d.polygon([(296,88),(420,174),(420,384),(504,384),(420,478),(296,478)], fill="#16BFEA")
           d.polygon([(266,36),(296,88),(296,478),(266,442)], fill="#5638E8")
-          im.save("assets/jigarzon.png")
+          im.save("assets/jlauncher.png")
           PY
 
       - name: Build Linux application
         run: |
           python -m PyInstaller --noconfirm --clean --onedir --windowed \
-            --name JigarzonLauncher \
-            --add-data "assets/jigarzon.png:assets" \
+            --name JLauncher \
+            --add-data "assets/jlauncher.png:assets" \
             --collect-all customtkinter \
             --collect-all pypresence \
             --collect-all tkinterdnd2 \
             --collect-all pystray \
             --collect-all PIL \
-            jigarzon_launcher.py
+            jlauncher.py
 
       - name: Package portable archive
         env:
           LINUX_ARCH: ${{ matrix.arch }}
         run: |
-          PACKAGE="JigarzonLauncher-linux-${LINUX_ARCH}"
+          PACKAGE="JLauncher-linux-${LINUX_ARCH}"
           mkdir -p "dist/${PACKAGE}"
-          cp -a dist/JigarzonLauncher "dist/${PACKAGE}/"
+          cp -a dist/JLauncher "dist/${PACKAGE}/"
           cat > "dist/${PACKAGE}/run-jigarzon.sh" <<'SH'
           #!/usr/bin/env bash
           HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
-          exec "$HERE/JigarzonLauncher/JigarzonLauncher" "$@"
+          exec "$HERE/JLauncher/JLauncher" "$@"
           SH
           chmod +x "dist/${PACKAGE}/run-jigarzon.sh"
           cat > "dist/${PACKAGE}/README.txt" <<TXT
-          Jigarzon Launcher for Linux (${LINUX_ARCH})
+          JLauncher for Linux (${LINUX_ARCH})
           Run ./run-jigarzon.sh to start.
           Requires a graphical Linux desktop with X11 or XWayland.
           Note: Horizon currently publishes an official Linux x86_64 launcher only.
           TXT
-          tar -C dist -czf "dist/Jigarzon-Launcher-Linux-${LINUX_ARCH}.tar.gz" "${PACKAGE}"
+          tar -C dist -czf "dist/JLauncher-Linux-${LINUX_ARCH}.tar.gz" "${PACKAGE}"
 
       - name: Build Debian package
         env:
@@ -96,38 +96,40 @@ jobs:
           DEB_ARCH: ${{ matrix.deb_arch }}
         run: |
           PKG="dist/deb-root"
-          mkdir -p "$PKG/DEBIAN" "$PKG/opt/JigarzonLauncher" "$PKG/usr/bin" "$PKG/usr/share/applications" "$PKG/usr/share/icons/hicolor/512x512/apps"
-          cp -a dist/JigarzonLauncher/. "$PKG/opt/JigarzonLauncher/"
-          cp assets/jigarzon.png "$PKG/usr/share/icons/hicolor/512x512/apps/jigarzon-launcher.png"
-          ln -s /opt/JigarzonLauncher/JigarzonLauncher "$PKG/usr/bin/jigarzon-launcher"
-          cat > "$PKG/usr/share/applications/jigarzon-launcher.desktop" <<'DESKTOP'
+          mkdir -p "$PKG/DEBIAN" "$PKG/opt/JLauncher" "$PKG/usr/bin" "$PKG/usr/share/applications" "$PKG/usr/share/icons/hicolor/512x512/apps"
+          cp -a dist/JLauncher/. "$PKG/opt/JLauncher/"
+          cp assets/jlauncher.png "$PKG/usr/share/icons/hicolor/512x512/apps/jlauncher.png"
+          ln -s /opt/JLauncher/JLauncher "$PKG/usr/bin/jlauncher"
+          cat > "$PKG/usr/share/applications/jlauncher.desktop" <<'DESKTOP'
           [Desktop Entry]
           Type=Application
-          Name=Jigarzon Launcher
+          Name=JLauncher
           Comment=Launcher for Horizon Minecraft Java Edition
-          Exec=jigarzon-launcher
-          Icon=jigarzon-launcher
+          Exec=jlauncher
+          Icon=jlauncher
           Terminal=false
           Categories=Game;
           DESKTOP
           cat > "$PKG/DEBIAN/control" <<CONTROL
-          Package: jigarzon-launcher
-          Version: ${JIGARZON_BUILD_VERSION}
+          Package: jlauncher
+          Conflicts: jigarzon-launcher
+          Replaces: jigarzon-launcher
+          Version: ${JLAUNCHER_BUILD_VERSION}
           Section: games
           Priority: optional
           Architecture: ${DEB_ARCH}
-          Maintainer: Jigarzon Launcher
+          Maintainer: JLauncher
           Depends: libx11-6, libxext6, libxrender1, libxtst6, libxi6, libxfixes3, libxcb1, libxkbcommon0, libglib2.0-0, libfontconfig1, libfreetype6, libdbus-1-3
-          Description: Jigarzon desktop launcher for Horizon
+          Description: JLauncher desktop launcher for Horizon
            A graphical launcher and instance manager for Horizon Minecraft Java Edition.
           CONTROL
-          dpkg-deb --build --root-owner-group "$PKG" "dist/Jigarzon-Launcher-Linux-${LINUX_ARCH}.deb"
+          dpkg-deb --build --root-owner-group "$PKG" "dist/JLauncher-Linux-${LINUX_ARCH}.deb"
 
       - name: Upload Linux build
         uses: actions/upload-artifact@v4
         with:
-          name: Jigarzon-Launcher-Linux-${{ matrix.arch }}
+          name: JLauncher-Linux-${{ matrix.arch }}
           path: |
-            dist/Jigarzon-Launcher-Linux-${{ matrix.arch }}.deb
-            dist/Jigarzon-Launcher-Linux-${{ matrix.arch }}.tar.gz
+            dist/JLauncher-Linux-${{ matrix.arch }}.deb
+            dist/JLauncher-Linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
