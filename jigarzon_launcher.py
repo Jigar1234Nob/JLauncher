@@ -580,7 +580,10 @@ class Jigarzon:
             return
         folder=game_dir/"horizon-mods"
         folder.mkdir(parents=True,exist_ok=True)
-        os.startfile(str(folder))
+        if platform.system() == "Darwin":
+            subprocess.Popen(["open", str(folder)])
+        else:
+            os.startfile(str(folder))
 
     def on_drop(self,event):
         try:paths=[Path(p.strip("{}")) for p in self.root.tk.splitlist(event.data)]
@@ -728,7 +731,7 @@ class Jigarzon:
         try:args=shlex.split(raw,posix=False)
         except ValueError as e:messagebox.showerror(APP,"Could not parse command: "+str(e));return
         args=[x.strip('"') for x in args]
-        if args and args[0].lower() in ("horizon","horizon-launcher.exe"):args=args[1:]
+        if args and args[0].lower() in ("horizon","horizon-launcher","horizon-launcher.exe"):args=args[1:]
         if not args:messagebox.showinfo(APP,"Enter a Horizon subcommand.");return
         self.command(args,"Developer command: "+raw)
     def clear_dev_logs(self):
@@ -736,6 +739,9 @@ class Jigarzon:
         if hasattr(self,"dev_console") and self.dev_console.winfo_exists():
             self.dev_console.configure(state="normal");self.dev_console.delete("1.0","end");self.dev_console.configure(state="disabled")
     def uninstall_jigarzon(self):
+        if platform.system() == "Darwin":
+            messagebox.showinfo(APP, "To remove Jigarzon Launcher on macOS, quit the app and move it from Applications to Trash. Your settings are stored in ~/Library/Application Support/JigarzonLauncher.")
+            return
         keep=messagebox.askyesno(APP,"Keep Horizon and Minecraft game files?\\n\\nYES keeps the Horizon installation, worlds and downloaded game files.\\nNO removes the Horizon folder as well.")
         uninstaller=Path(sys.executable).resolve().parent/"unins000.exe"
         if not uninstaller.is_file():
