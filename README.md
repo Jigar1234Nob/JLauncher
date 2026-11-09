@@ -1,41 +1,55 @@
+# JLauncher for Windows
+
 <p align="center">
   <img src="assets/jigarzon-logo.svg" alt="JLauncher logo" width="160">
 </p>
 
-<h1 align="center">JLauncher</h1>
+<p align="center">A Windows desktop launcher for Horizon and Minecraft: Java Edition.</p>
 
-<p align="center">
-  A Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
-</p>
-
-JLauncher is a Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+This branch contains the Windows application source and its GitHub Actions build workflow. The default branch contains only the project overview and logo.
 
 ## Features
 
 - Guided Microsoft sign-in and first-run setup.
-- Automatically checks for JLauncher updates at startup and installs newer published releases.
-- Checks Horizon's latest Nightly build on every startup and installs it when needed.
-- Reads the current Minecraft Java Edition version from Horizon's official project information (currently 26.3).
-- Home dashboard with the JLauncher v2.00 release announcement and the current Horizon build label.
-- Prism-inspired dark interface with the JL purple/cyan identity.
-- Windows application icon, taskbar icon and Inno Setup installer branding.
-- System-tray support: closing the window keeps JLauncher running in the notification area; the tray menu can reopen the launcher, launch the selected instance, or fully exit.
-- Per-user Windows installer with Start Menu and optional desktop shortcuts.
-- Instance manager to create, select, rename, reinstall and delete instances.
-- Mod browser for Horizon-compatible content.
-- Open the selected instance's Horizon mods folder.
-- Optional Stats for Nerds developer gallery with live application logs and Horizon CLI access.
-- In-app reinstall and uninstall controls, including a choice to preserve Horizon and Minecraft files.
-- Drag and drop Horizon `.mrpack` or supported modpack `.zip` files to import them.
+- Checks for JLauncher updates at startup.
+- Checks Horizon's latest Nightly build and installs it when needed.
+- Manages separate Minecraft instances.
+- Browses Horizon-compatible mods and imports supported `.mrpack` or modpack `.zip` files.
+- Opens the selected instance's Horizon mods folder.
+- Optional developer diagnostics with application logs and Horizon CLI access.
+- System-tray support: closing the window hides JLauncher in the notification area. The tray menu can reopen it, launch the selected instance, or fully exit.
+- In-app reinstall and uninstall controls, with an option to preserve Horizon and Minecraft files.
 
-## Mods and compatibility
+## Requirements and compatibility
 
-Horizon does not run arbitrary Java mod JARs as-is. Its mod browser checks and ports supported mod content. Dropping a raw `.jar` into JLauncher will therefore not activate it; use Horizon's mod browser for compatible mods. Modpack files are imported as their own instance.
+- Windows 10 or later.
+- A Microsoft account that owns Minecraft: Java Edition is required to play.
+- Horizon does not run arbitrary Java mod JARs as-is. Use the Horizon-compatible mod browser or supported modpack import.
 
-A Microsoft account that owns Minecraft: Java Edition is required. Minecraft assets are downloaded from Mojang through Horizon and are not bundled with JLauncher.
+## Build
 
-## Building on Windows
+The workflow is `.github/workflows/build-windows.yml`. It runs on pushes to this branch and can also be started manually.
 
-The GitHub Actions workflow runs from `build` and builds both `JLauncherLauncher.exe` and `JLauncher-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when JLauncher starts.
+The workflow uses Python 3.12, PyInstaller, and Inno Setup. It creates:
 
-JLauncher is an independent project and is not affiliated with Mojang Studios or Microsoft.
+- `JLauncher.exe`
+- `JLauncher-Setup-Windows.exe`
+
+To publish a GitHub Release, push a version tag such as `v3.0.0`. The workflow attaches the Windows installer to that release.
+
+## Install location and upgrade behaviour
+
+The installer uses the per-user directory:
+
+`%LOCALAPPDATA%\Programs\JLauncher`
+
+It removes the previous `Jigarzon Launcher` program folder and Start Menu group during installation. The legacy application-data directory is intentionally retained so existing settings and Horizon/Minecraft files are not discarded.
+
+## Other platforms
+
+macOS and Linux source and workflows are maintained separately:
+
+- [macOS branch](https://github.com/Jigar1234Nob/JLauncher/tree/macos-build)
+- [Linux branch](https://github.com/Jigar1234Nob/JLauncher/tree/linux-build)
+
+JLauncher is independent and is not affiliated with Mojang Studios or Microsoft.
