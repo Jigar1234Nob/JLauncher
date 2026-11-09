@@ -1,4 +1,4 @@
-name: Build macOS App
+name: Build JLauncher for macOS
 
 on:
   push:
@@ -31,11 +31,11 @@ jobs:
           python -m pip install pyinstaller customtkinter pypresence tkinterdnd2 pillow pystray
       - name: Generate macOS application icon
         run: |
-          mkdir -p assets/Jigarzon.iconset
+          mkdir -p assets/JLauncher.iconset
           python - <<'PY'
           from PIL import Image, ImageDraw
           from pathlib import Path
-          out = Path("assets/Jigarzon.iconset")
+          out = Path("assets/JLauncher.iconset")
           sizes = [16, 32, 128, 256, 512]
           for size in sizes:
               im = Image.new("RGBA", (size, size), (17, 19, 25, 255))
@@ -50,30 +50,30 @@ jobs:
               if size <= 512:
                   im.resize((size*2,size*2), Image.Resampling.LANCZOS).save(out / f"icon_{size}x{size}@2x.png")
           PY
-          iconutil -c icns assets/Jigarzon.iconset -o assets/jigarzon.icns
+          iconutil -c icns assets/JLauncher.iconset -o assets/jlauncher.icns
       - name: Build macOS application bundle
         run: |
           python -m PyInstaller --noconfirm --clean --windowed --onedir \
-            --name JigarzonLauncher \
-            --osx-bundle-identifier au.jigar.jigarzonlauncher \
-            --icon assets/jigarzon.icns \
+            --name JLauncher \
+            --osx-bundle-identifier au.jigar.jlauncherlauncher \
+            --icon assets/jlauncher.icns \
             --collect-all customtkinter \
             --collect-all pypresence \
             --collect-all tkinterdnd2 \
             --collect-all pystray \
-            jigarzon_launcher.py
+            jlauncher_launcher.py
       - name: Package DMG and ZIP
         run: |
           mkdir -p staging
-          ditto dist/JigarzonLauncher.app staging/JigarzonLauncher.app
+          ditto dist/JLauncher.app staging/JLauncher.app
           ln -s /Applications staging/Applications
-          hdiutil create -volname "Jigarzon Launcher" -srcfolder staging -ov -format UDZO "dist/Jigarzon-Setup-macOS-${{ matrix.arch }}.dmg"
-          ditto -c -k --sequesterRsrc --keepParent dist/JigarzonLauncher.app "dist/Jigarzon-macOS-${{ matrix.arch }}.zip"
+          hdiutil create -volname "JLauncher" -srcfolder staging -ov -format UDZO "dist/JLauncher-Setup-macOS-${{ matrix.arch }}.dmg"
+          ditto -c -k --sequesterRsrc --keepParent dist/JLauncher.app "dist/JLauncher-macOS-${{ matrix.arch }}.zip"
       - name: Upload macOS build
         uses: actions/upload-artifact@v4
         with:
-          name: Jigarzon-Launcher-macOS-${{ matrix.arch }}
+          name: JLauncher-macOS-${{ matrix.arch }}
           path: |
-            dist/Jigarzon-Setup-macOS-${{ matrix.arch }}.dmg
-            dist/Jigarzon-macOS-${{ matrix.arch }}.zip
+            dist/JLauncher-Setup-macOS-${{ matrix.arch }}.dmg
+            dist/JLauncher-macOS-${{ matrix.arch }}.zip
           if-no-files-found: error
