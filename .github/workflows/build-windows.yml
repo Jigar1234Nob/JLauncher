@@ -1,4 +1,4 @@
-name: Build Windows Installer
+name: Build JLauncher for Windows
 
 on:
   push:
@@ -29,16 +29,16 @@ jobs:
         run: choco install innosetup --yes --no-progress
       - name: Install build dependencies
         run: python -m pip install --upgrade pip pyinstaller customtkinter pypresence tkinterdnd2 pillow pystray
-      - name: Generate JL application icon
+      - name: Generate JLauncher application icon
         run: python generate_icon.py
-      - name: Build Windows application
+      - name: Build JLauncher application
         run: >
           python -m PyInstaller --noconfirm --clean --onefile --windowed
-          --name JLauncher --icon assets/jigarzon.ico
-          --add-data "assets/jigarzon.ico;assets"
+          --name JLauncher --icon assets/jlauncher.ico
+          --add-data "assets/jlauncher.ico;assets"
           --collect-all customtkinter --collect-all pypresence
-          --collect-all tkinterdnd2 --collect-all pystray jigarzon_launcher.py
-      - name: Build Inno Setup installer
+          --collect-all tkinterdnd2 --collect-all pystray jlauncher.py
+      - name: Build JLauncher installer
         shell: pwsh
         run: |
           $inno = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -49,7 +49,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Inno Setup compilation failed with exit code $LASTEXITCODE"
           }
-      - name: Upload Windows build
+      - name: Upload JLauncher for Windows
         uses: actions/upload-artifact@v4
         with:
           name: JLauncher-Windows
