@@ -148,9 +148,12 @@ def launcher_update_asset(assets):
                   ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
         names += ["Jigarzon-Setup.exe"]
     elif system == "linux":
-        if machine not in ("x86_64", "amd64"):
+        if machine in ("aarch64", "arm64"):
+            names = ["Jigarzon-Launcher-Linux-arm64.deb", "Jigarzon-Launcher-Linux-arm64.tar.gz"]
+        elif machine in ("x86_64", "amd64"):
+            names = ["Jigarzon-Launcher-Linux-x86_64.deb", "Jigarzon-Launcher-Linux-x86_64.tar.gz"]
+        else:
             return None
-        names = ["Jigarzon-Launcher-Linux-x86_64.deb", "Jigarzon-Launcher-Linux-x86_64.tar.gz"]
     else:
         return None
     return next((a for name in names for a in assets if a.get("name") == name), None)
