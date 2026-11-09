@@ -10,8 +10,20 @@ permissions:
 
 jobs:
   build:
-    name: Build Linux x86_64
-    runs-on: ubuntu-24.04
+    name: Build Linux ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: x86_64
+            runner: ubuntu-24.04
+            arch: x86_64
+            deb_arch: amd64
+          - label: ARM64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+            deb_arch: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,11 +51,9 @@ jobs:
           from PIL import Image, ImageDraw
           im = Image.new("RGBA", (512, 512), (23, 25, 31, 255))
           d = ImageDraw.Draw(im)
-          def poly(points, fill):
-              d.polygon(points, fill=fill)
-          poly([(50,172),(266,36),(266,388),(156,478),(36,478),(156,376),(156,176)], "#A33BFF")
-          poly([(296,88),(420,174),(420,384),(504,384),(420,478),(296,478)], "#16BFEA")
-          poly([(266,36),(296,88),(296,478),(266,442)], "#5638E8")
+          d.polygon([(50,172),(266,36),(266,388),(156,478),(36,478),(156,376),(156,176)], fill="#A33BFF")
+          d.polygon([(296,88),(420,174),(420,384),(504,384),(420,478),(296,478)], fill="#16BFEA")
+          d.polygon([(266,36),(296,88),(296,478),(266,442)], fill="#5638E8")
           im.save("assets/jigarzon.png")
           PY
 
@@ -60,24 +70,30 @@ jobs:
             jigarzon_launcher.py
 
       - name: Package portable archive
+        env:
+          LINUX_ARCH: ${{ matrix.arch }}
         run: |
-          mkdir -p "dist/JigarzonLauncher-linux-x86_64"
-          cp -a dist/JigarzonLauncher "dist/JigarzonLauncher-linux-x86_64/"
-          cat > "dist/JigarzonLauncher-linux-x86_64/run-jigarzon.sh" <<'SH'
+          PACKAGE="JigarzonLauncher-linux-${LINUX_ARCH}"
+          mkdir -p "dist/${PACKAGE}"
+          cp -a dist/JigarzonLauncher "dist/${PACKAGE}/"
+          cat > "dist/${PACKAGE}/run-jigarzon.sh" <<'SH'
           #!/usr/bin/env bash
           HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
           exec "$HERE/JigarzonLauncher/JigarzonLauncher" "$@"
           SH
-          chmod +x "dist/JigarzonLauncher-linux-x86_64/run-jigarzon.sh"
-          cat > "dist/JigarzonLauncher-linux-x86_64/README.txt" <<'TXT'
-          Jigarzon Launcher for Linux (x86_64)
+          chmod +x "dist/${PACKAGE}/run-jigarzon.sh"
+          cat > "dist/${PACKAGE}/README.txt" <<TXT
+          Jigarzon Launcher for Linux (${LINUX_ARCH})
           Run ./run-jigarzon.sh to start.
           Requires a graphical Linux desktop with X11 or XWayland.
-          The official Horizon Linux x86_64 AppImage is downloaded by Jigarzon on first launch.
+          Note: Horizon currently publishes an official Linux x86_64 launcher only.
           TXT
-          tar -C dist -czf "dist/Jigarzon-Launcher-Linux-x86_64.tar.gz" "JigarzonLauncher-linux-x86_64"
+          tar -C dist -czf "dist/Jigarzon-Launcher-Linux-${LINUX_ARCH}.tar.gz" "${PACKAGE}"
 
       - name: Build Debian package
+        env:
+          LINUX_ARCH: ${{ matrix.arch }}
+          DEB_ARCH: ${{ matrix.deb_arch }}
         run: |
           PKG="dist/deb-root"
           mkdir -p "$PKG/DEBIAN" "$PKG/opt/JigarzonLauncher" "$PKG/usr/bin" "$PKG/usr/share/applications" "$PKG/usr/share/icons/hicolor/512x512/apps"
@@ -99,19 +115,19 @@ jobs:
           Version: ${JIGARZON_BUILD_VERSION}
           Section: games
           Priority: optional
-          Architecture: amd64
+          Architecture: ${DEB_ARCH}
           Maintainer: Jigarzon Launcher
           Depends: libx11-6, libxext6, libxrender1, libxtst6, libxi6, libxfixes3, libxcb1, libxkbcommon0, libglib2.0-0, libfontconfig1, libfreetype6, libdbus-1-3
           Description: Jigarzon desktop launcher for Horizon
            A graphical launcher and instance manager for Horizon Minecraft Java Edition.
           CONTROL
-          dpkg-deb --build --root-owner-group "$PKG" "dist/Jigarzon-Launcher-Linux-x86_64.deb"
+          dpkg-deb --build --root-owner-group "$PKG" "dist/Jigarzon-Launcher-Linux-${LINUX_ARCH}.deb"
 
       - name: Upload Linux build
         uses: actions/upload-artifact@v4
         with:
-          name: Jigarzon-Launcher-Linux-x86_64
+          name: Jigarzon-Launcher-Linux-${{ matrix.arch }}
           path: |
-            dist/Jigarzon-Launcher-Linux-x86_64.deb
-            dist/Jigarzon-Launcher-Linux-x86_64.tar.gz
+            dist/Jigarzon-Launcher-Linux-${{ matrix.arch }}.deb
+            dist/Jigarzon-Launcher-Linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
