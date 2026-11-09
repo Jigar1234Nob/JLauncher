@@ -1,7 +1,7 @@
 # JLauncher
 
 <p align="center">
-  <img src="assets/jigarzon-logo.svg" alt="JLauncher logo" width="160">
+  <img src="assets/jlauncher-logo.svg" alt="JLauncher logo" width="160">
 </p>
 
 <p align="center">
