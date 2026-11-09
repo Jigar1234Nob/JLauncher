@@ -36,7 +36,7 @@ jobs:
           from PIL import Image, ImageDraw
           from pathlib import Path
           out = Path("assets/Jigarzon.iconset")
-          sizes = [16, 32, 64, 128, 256, 512]
+          sizes = [16, 32, 128, 256, 512]
           for size in sizes:
               im = Image.new("RGBA", (size, size), (17, 19, 25, 255))
               d = ImageDraw.Draw(im)
