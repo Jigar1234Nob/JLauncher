@@ -865,10 +865,14 @@ class Jigarzon:
 
     def install_launcher_update(self,installer):
         try:
-            if platform.system().lower() != "windows":
-                raise RuntimeError("Automatic installation is currently supported only on Windows. A matching installer was downloaded to: "+installer)
-            subprocess.Popen([installer,"/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CLOSEAPPLICATIONS","/RESTARTAPPLICATIONS"])
-            self.root.after(300,self.exit_app)
+            if platform.system() == "Windows":
+                subprocess.Popen([installer,"/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CLOSEAPPLICATIONS","/RESTARTAPPLICATIONS"])
+                self.root.after(300,self.exit_app)
+            elif platform.system() == "Linux" and installer.endswith(".deb"):
+                subprocess.Popen(["pkexec","apt-get","install","-y",installer])
+                self.root.after(300,self.exit_app)
+            else:
+                raise RuntimeError("Open the downloaded package and install it over the existing Jigarzon Launcher. File: "+installer)
         except Exception as e:messagebox.showerror(APP,"Could not start the Jigarzon update installer:\\n\\n"+str(e))
 
     def set_window_icon(self,window):
