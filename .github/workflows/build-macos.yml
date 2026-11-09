@@ -1,0 +1,79 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [macos-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build macOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            arch: Apple-Silicon
+          - runner: macos-15-intel
+            arch: Intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller customtkinter pypresence tkinterdnd2 pillow pystray
+      - name: Generate macOS application icon
+        run: |
+          mkdir -p assets/Jigarzon.iconset
+          python - <<'PY'
+          from PIL import Image, ImageDraw
+          from pathlib import Path
+          out = Path("assets/Jigarzon.iconset")
+          sizes = [16, 32, 64, 128, 256, 512]
+          for size in sizes:
+              im = Image.new("RGBA", (size, size), (17, 19, 25, 255))
+              d = ImageDraw.Draw(im)
+              k = size / 256
+              def poly(points, fill):
+                  d.polygon([(round(x*k), round(y*k)) for x,y in points], fill=fill)
+              poly([(25,86),(133,18),(133,194),(78,239),(18,239),(78,188),(78,88)], "#A33BFF")
+              poly([(148,44),(210,87),(210,192),(252,192),(210,239),(148,239)], "#16BFEA")
+              poly([(133,18),(148,44),(148,239),(133,221)], "#5638E8")
+              im.save(out / f"icon_{size}x{size}.png")
+              if size <= 256:
+                  im.resize((size*2,size*2), Image.Resampling.LANCZOS).save(out / f"icon_{size}x{size}@2x.png")
+          PY
+          iconutil -c icns assets/Jigarzon.iconset -o assets/jigarzon.icns
+      - name: Build macOS application bundle
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onedir \
+            --name JigarzonLauncher \
+            --osx-bundle-identifier au.jigar.jigarzonlauncher \
+            --icon assets/jigarzon.icns \
+            --collect-all customtkinter \
+            --collect-all pypresence \
+            --collect-all tkinterdnd2 \
+            --collect-all pystray \
+            jigarzon_launcher.py
+      - name: Package DMG and ZIP
+        run: |
+          mkdir -p staging
+          ditto dist/JigarzonLauncher.app staging/JigarzonLauncher.app
+          ln -s /Applications staging/Applications
+          hdiutil create -volname "Jigarzon Launcher" -srcfolder staging -ov -format UDZO "dist/Jigarzon-Setup-macOS-${{ matrix.arch }}.dmg"
+          ditto -c -k --sequesterRsrc --keepParent dist/JigarzonLauncher.app "dist/Jigarzon-macOS-${{ matrix.arch }}.zip"
+      - name: Upload macOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jigarzon-Launcher-macOS-${{ matrix.arch }}
+          path: |
+            dist/Jigarzon-Setup-macOS-${{ matrix.arch }}.dmg
+            dist/Jigarzon-macOS-${{ matrix.arch }}.zip
+          if-no-files-found: error
