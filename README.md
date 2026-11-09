@@ -1,45 +1,44 @@
-# JLauncher for Linux
+# JLauncher
 
 <p align="center">
   <img src="assets/jigarzon-logo.svg" alt="JLauncher logo" width="160">
 </p>
 
-<p align="center">A Linux desktop launcher for Horizon and Minecraft: Java Edition.</p>
+<p align="center">
+  <strong>A cleaner way to manage Horizon and Minecraft: Java Edition on Linux.</strong>
+</p>
 
-This branch contains the Linux application source and packaging workflow. Windows and macOS builds are maintained separately.
-
-## Build targets
-
-The workflow `.github/workflows/build-linux.yml` builds native packages for:
-
-- x86_64 / amd64
-- ARM64 / aarch64
-
-For each architecture it produces a Debian `.deb` package and a portable `.tar.gz` archive. Builds are uploaded as GitHub Actions artifacts. The workflow currently does not publish Linux packages to GitHub Releases automatically.
-
-## Requirements
-
-- A graphical Linux desktop with X11 or XWayland.
-- A Microsoft account that owns Minecraft: Java Edition is required to play.
-- Horizon-compatible Linux binaries for the target architecture.
-
-## Important ARM64 limitation
-
-Horizon currently publishes its official Linux launcher for x86_64 only. The JLauncher ARM64 application and packages can run natively, but Horizon installation and gameplay remain unavailable on Linux ARM64 until Horizon publishes an ARM64 Linux build. JLauncher should report this limitation rather than trying to execute an incompatible x86_64 binary.
+JLauncher is a desktop companion for Horizon, the Rust-based Minecraft: Java Edition client. It provides a graphical place to manage account sign-in, game instances, versions, and supported mods.
 
 ## Features
 
-- Guided setup and Microsoft sign-in.
-- Horizon installation and update checks, subject to upstream platform support.
-- Minecraft instance management.
-- Horizon-compatible mod browsing and supported modpack importing.
-- System-tray integration on supported graphical desktops.
-- Launcher update checks against published JLauncher releases.
+- **Guided first-run setup:** Helps you complete initial configuration and account connection.
+- **Microsoft account sign-in:** Connect the account that owns Minecraft: Java Edition.
+- **Horizon setup:** Helps install Horizon when an official compatible Linux package is available for your architecture.
+- **Update checks:** Checks for newer JLauncher releases when the application starts.
+- **Instance management:** Keep separate Minecraft configurations and select the instance you want to launch.
+- **Game version selection:** Choose from the versions made available by Horizon.
+- **Compatible mod browser:** Browse and install mods supported by Horizon.
+- **Modpack importing:** Import supported modpack archives, including compatible `.mrpack` files.
+- **Troubleshooting information:** Use available logs and diagnostics to investigate problems.
 
-## Build locally
+## System requirements
 
-Use Python 3.12 and install the system and Python dependencies listed in `.github/workflows/build-linux.yml`. GitHub Actions provides the reproducible x86_64 and ARM64 build environments.
+- A graphical Linux desktop with X11 or XWayland support.
+- A Microsoft account that owns Minecraft: Java Edition to play.
+- An internet connection for sign-in, release checks, and downloads.
+- Compatible Horizon binaries for your Linux architecture.
 
-The Windows source is on the [`build` branch](https://github.com/Jigar1234Nob/JLauncher/tree/build), and macOS source is on the [`macos-build` branch](https://github.com/Jigar1234Nob/JLauncher/tree/macos-build).
+## Architecture compatibility
 
-JLauncher is independent and is not affiliated with Mojang Studios or Microsoft.
+JLauncher can be packaged for both x86_64 and ARM64 Linux systems. However, Horizon's official Linux launcher is currently available for x86_64 only. On ARM64, JLauncher itself may run, but Horizon installation and gameplay require an official compatible ARM64 release from Horizon.
+
+## Mod compatibility
+
+Horizon does not guarantee support for arbitrary Java mod JAR files. Use the compatible mod browser and supported modpack import features.
+
+## Getting started
+
+Launch JLauncher from your desktop environment, follow the setup tutorial, connect your Microsoft account, and complete Horizon setup if a compatible package is available for your system.
+
+JLauncher is an independent community project and is not affiliated with Mojang Studios or Microsoft.
