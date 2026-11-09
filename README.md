@@ -1,44 +1,41 @@
-<p align="center">
-  <img src="assets/jigarzon-logo.svg" alt="Jigarzon Launcher logo" width="160">
-</p>
-
-<h1 align="center">Jigarzon Launcher</h1>
+# JLauncher for macOS
 
 <p align="center">
-  A desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+  <img src="assets/jigarzon-logo.svg" alt="JLauncher logo" width="160">
 </p>
 
-Jigarzon Launcher is a desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+<p align="center">A desktop launcher for Horizon and Minecraft: Java Edition.</p>
+
+This branch contains the macOS application source and packaging workflow. Windows and Linux builds remain on their own branches.
+
+## Build targets
+
+The workflow `.github/workflows/build-macos.yml` builds on separate Apple Silicon and Intel runners. It packages the application as:
+
+- A macOS `.dmg` installer.
+- A portable `.zip` archive.
+
+Builds are uploaded as GitHub Actions artifacts. The workflow currently does not publish macOS assets to GitHub Releases automatically.
 
 ## Features
 
-- Guided Microsoft sign-in and first-run setup.
-- Automatically checks for Jigarzon Launcher updates at startup and installs newer published releases.
-- Checks Horizon's latest Nightly build on every startup and installs it when needed.
-- Reads the current Minecraft Java Edition version from Horizon's official project information (currently 26.3).
-- Home dashboard with the Jigarzon v2.00 release announcement and the current Horizon build label.
-- Prism-inspired dark interface with the JL purple/cyan identity.
-- Branded Windows and macOS application icons and platform-specific packages.
-- System-tray support: closing the window keeps Jigarzon running in the notification area/menu bar; the tray menu can reopen the launcher, launch the selected instance, or fully exit.
-- Per-user Windows installer with Start Menu and optional desktop shortcuts.
-- Instance manager to create, select, rename, reinstall and delete instances.
-- Mod browser for Horizon-compatible content.
-- Open the selected instance's Horizon mods folder.
-- Optional Stats for Nerds developer gallery with live application logs and Horizon CLI access.
-- In-app reinstall and uninstall controls, including a choice to preserve Horizon and Minecraft files.
-- Drag and drop Horizon `.mrpack` or supported modpack `.zip` files to import them.
+- Guided first-run setup and Microsoft sign-in.
+- Horizon installation and update checks, subject to upstream macOS package availability.
+- Minecraft instance management.
+- Horizon-compatible mod browsing and supported modpack importing.
+- System-tray/menu-bar integration where supported.
+- Launcher update checks against published JLauncher releases.
 
-## Mods and compatibility
+## Important macOS notes
 
-Horizon does not run arbitrary Java mod JARs as-is. Its mod browser checks and ports supported mod content. Dropping a raw `.jar` into Jigarzon will therefore not activate it; use Horizon's mod browser for compatible mods. Modpack files are imported as their own instance.
+- The application is currently unsigned and not notarized. macOS may require approval in Privacy & Security before opening it.
+- Horizon must publish a compatible macOS CLI archive for Horizon installation and gameplay to work on the Mac.
+- A Microsoft account that owns Minecraft: Java Edition is required to play.
 
-A Microsoft account that owns Minecraft: Java Edition is required. Minecraft assets are downloaded from Mojang through Horizon and are not bundled with Jigarzon.
+## Build locally
 
-## Platform builds
+Use Python 3.12 and install the dependencies listed in the workflow. The GitHub Actions workflow is the supported reproducible build path.
 
-- **Windows:** built from the `build` branch by `.github/workflows/build-windows.yml` using PyInstaller and Inno Setup. Output: `Jigarzon-Setup-Windows.exe`.
-- **macOS:** built separately from the `macos-build` branch by `.github/workflows/build-macos.yml`. It produces a `.dmg` and `.zip` for Apple Silicon and Intel Macs. The macOS build does not modify the Windows `build` branch.
+The Windows source is on the [`build` branch](https://github.com/Jigar1234Nob/JLauncher/tree/build), and Linux source is on the [`linux-build` branch](https://github.com/Jigar1234Nob/JLauncher/tree/linux-build).
 
-The macOS app bundle is currently unsigned and not notarized. macOS may require the user to approve opening it in Privacy & Security. Horizon itself must publish a compatible macOS CLI archive for the in-app Horizon installer to work on that Mac. Future Jigarzon releases need a matching macOS DMG asset for the in-app updater to offer macOS updates.
-
-Jigarzon is an independent project and is not affiliated with Mojang Studios or Microsoft.
+JLauncher is independent and is not affiliated with Mojang Studios or Microsoft.
