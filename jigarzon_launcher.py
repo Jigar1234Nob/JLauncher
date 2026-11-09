@@ -19,9 +19,16 @@ RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=
 ctk.set_appearance_mode("dark")
 
 def data_dir():
-    p = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / "JigarzonLauncher"
+    if platform.system() == "Darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.getenv("LOCALAPPDATA", str(Path.home())))
+    p = base / "JigarzonLauncher"
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+def horizon_executable_names():
+    return ("horizon-launcher", "horizon") if platform.system() == "Darwin" else ("horizon-launcher.exe",)
 
 def settings():
     try: return json.loads((data_dir() / "settings.json").read_text(encoding="utf-8"))
@@ -33,13 +40,17 @@ def save_settings(value):
 def locate_horizon():
     saved = settings().get("horizon_path", "")
     candidates = [Path(saved)] if saved else []
-    candidates += [data_dir() / "Horizon" / "horizon-launcher.exe",
-                   Path(os.getenv("LOCALAPPDATA", "")) / "Programs/Horizon/horizon-launcher.exe"]
+    names = horizon_executable_names()
+    candidates += [data_dir() / "Horizon" / name for name in names]
+    if platform.system() == "Windows":
+        candidates.append(Path(os.getenv("LOCALAPPDATA", "")) / "Programs/Horizon/horizon-launcher.exe")
     for p in candidates:
         if p.is_file(): return p
     folder = data_dir() / "Horizon"
     if folder.exists():
-        return next(iter(folder.rglob("horizon-launcher.exe")), None)
+        for name in names:
+            found = next(iter(folder.rglob(name)), None)
+            if found: return found
     return None
 
 def install_horizon(progress):
@@ -48,10 +59,21 @@ def install_horizon(progress):
     with urllib.request.urlopen(req, timeout=30) as r: releases = json.loads(r.read().decode())
     release = next((r for r in releases if str(r.get("tag_name", "")).startswith("launcher@")), None)
     if not release: raise RuntimeError("No official Horizon launcher release was found.")
-    arm = (platform.machine().lower() in ("arm64", "aarch64") or os.getenv("PROCESSOR_ARCHITECTURE", "").upper() == "ARM64" or os.getenv("PROCESSOR_ARCHITEW6432", "").upper() == "ARM64")
-    filename = "horizon-launcher-windows-arm64.zip" if arm else "horizon-launcher-windows-x64.zip"
-    asset = next((a for a in release.get("assets", []) if a.get("name") == filename), None)
-    if not asset: raise RuntimeError("The official release is missing " + filename)
+    arm = platform.machine().lower() in ("arm64", "aarch64")
+    if platform.system() == "Darwin":
+        candidates = (["horizon-launcher-macos-arm64.zip", "horizon-launcher-darwin-arm64.zip",
+                       "horizon-launcher-macos-aarch64.zip"] if arm else
+                      ["horizon-launcher-macos-x64.zip", "horizon-launcher-darwin-x64.zip",
+                       "horizon-launcher-macos-x86_64.zip"])
+    elif platform.system() == "Windows":
+        candidates = ["horizon-launcher-windows-arm64.zip" if arm else "horizon-launcher-windows-x64.zip"]
+    else:
+        raise RuntimeError("Automatic Horizon installation is not configured for " + platform.system() + ".")
+    asset = next((a for name in candidates for a in release.get("assets", []) if a.get("name") == name), None)
+    if not asset:
+        raise RuntimeError("The official Horizon release does not publish a compatible " +
+                           platform.system() + " " + platform.machine() + " package. Checked: " +
+                           ", ".join(candidates))
     archive = data_dir() / "horizon-package.zip"
     digest, received, total = hashlib.sha256(), 0, int(asset.get("size") or 0)
     progress("Downloading Horizon " + release["tag_name"].replace("launcher@", "") + "…", .1)
@@ -77,8 +99,15 @@ def install_horizon(progress):
             if dest != root and root not in dest.parents: raise RuntimeError("Unsafe path in Horizon archive.")
         z.extractall(target)
     archive.unlink(missing_ok=True)
-    exe = next(iter(target.rglob("horizon-launcher.exe")), None)
-    if not exe: raise RuntimeError("The package did not contain horizon-launcher.exe.")
+    exe = None
+    for name in horizon_executable_names():
+        exe = next(iter(target.rglob(name)), None)
+        if exe: break
+    if not exe:
+        raise RuntimeError("The Horizon archive did not contain a supported launcher executable for " +
+                           platform.system() + " " + platform.machine() + ".")
+    if platform.system() == "Darwin":
+        exe.chmod(exe.stat().st_mode | 0o111)
     progress("Horizon is ready.", 1)
     return exe
 
@@ -96,9 +125,10 @@ def launcher_update_asset(assets):
         names += (["Jigarzon-Setup-Windows-arm64.exe", "Jigarzon-Setup-arm64.exe"] if arm64 else
                   ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
         names += ["Jigarzon-Setup.exe"]
+    elif system == "darwin":
+        names = ["Jigarzon-Setup-macOS.dmg", "Jigarzon-macOS.dmg",
+                 "Jigarzon-Setup-macOS.zip", "Jigarzon-macOS.zip"]
     else:
-        # Jigarzon is currently packaged for Windows only. Never download a
-        # Windows installer on macOS/Linux or pretend it can update those OSes.
         return None
     return next((a for name in names for a in assets if a.get("name") == name), None)
 
@@ -782,7 +812,8 @@ class Jigarzon:
                     return
                 self.jobs.put(("log","Jigarzon Launcher update "+tag+" found. Downloading installer…"))
                 req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
-                installer=data_dir()/"Jigarzon-Setup-update.exe"
+                suffix = ".dmg" if asset["name"].lower().endswith(".dmg") else (".zip" if asset["name"].lower().endswith(".zip") else ".exe")
+                installer=data_dir()/("Jigarzon-Setup-update"+suffix)
                 digest=hashlib.sha256()
                 with urllib.request.urlopen(req,timeout=60) as response,installer.open("wb") as out:
                     while True:
@@ -826,7 +857,10 @@ class Jigarzon:
         threading.Thread(target=worker, daemon=True).start()
 
     def browse(self):
-        path = filedialog.askopenfilename(filetypes=[("Horizon launcher", "horizon-launcher.exe"), ("Applications", "*.exe")])
+        if platform.system() == "Darwin":
+            path = filedialog.askopenfilename(filetypes=[("Horizon launcher", "horizon-launcher"), ("All files", "*")])
+        else:
+            path = filedialog.askopenfilename(filetypes=[("Horizon launcher", "horizon-launcher.exe"), ("Applications", "*.exe")])
         if path:
             self.exe.set(path); self.save()
             if hasattr(self, "path_label"): self.path_label.configure(text=path)
