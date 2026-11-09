@@ -5,44 +5,36 @@
 </p>
 
 <p align="center">
-  A desktop launcher for Horizon and Minecraft: Java Edition.
+  <strong>A cleaner way to manage Horizon and Minecraft: Java Edition.</strong>
 </p>
 
-JLauncher is an independent desktop launcher project for managing Horizon installations, Minecraft Java Edition instances, compatible mods, and launcher updates.
+JLauncher is a desktop companion for **Horizon**, the Rust-based Minecraft: Java Edition client. It brings installation, account sign-in, game versions, instances, and supported mods together in one straightforward app.
 
-## Platform builds
+## What you can do with JLauncher
 
-The project keeps each operating-system build on its own branch:
+- **Get started with guided setup:** Follow the first-run tutorial to configure the launcher and connect your Microsoft account.
+- **Install and update Horizon:** JLauncher checks for the latest supported Horizon launcher release and helps install it.
+- **Manage Minecraft instances:** Keep separate game setups and choose which instance you want to use.
+- **Choose game versions:** View available versions and select the version for an instance.
+- **Discover compatible mods:** Browse mods supported by Horizon and install them through the launcher.
+- **Import modpacks:** Import supported modpack archives, including compatible Modrinth `.mrpack` files.
+- **Keep JLauncher up to date:** The app checks for newer JLauncher releases when it starts.
+- **Use the system tray:** Keep the launcher running in the background, reopen it from the tray, launch the selected instance, or fully exit.
+- **Get useful diagnostics:** Access logs and troubleshooting information when something does not work as expected.
 
-| Platform | Source branch | Build workflow |
-|---|---|---|
-| Windows | [`build`](https://github.com/Jigar1234Nob/JLauncher/tree/build) | [Windows workflow](https://github.com/Jigar1234Nob/JLauncher/actions/workflows/build-windows.yml) |
-| macOS | [`macos-build`](https://github.com/Jigar1234Nob/JLauncher/tree/macos-build) | [macOS workflow](https://github.com/Jigar1234Nob/JLauncher/actions/workflows/build-macos.yml) |
-| Linux | [`linux-build`](https://github.com/Jigar1234Nob/JLauncher/tree/linux-build) | [Linux workflow](https://github.com/Jigar1234Nob/JLauncher/actions/workflows/build-linux.yml) |
+## Designed to stay simple
 
-Download published installers and packages from [GitHub Releases](https://github.com/Jigar1234Nob/JLauncher/releases).
+JLauncher brings common launcher tasks into one interface instead of making you hunt through folders and configuration files. Its setup guidance is designed to make the first launch easier, while instance management helps keep different game configurations organised.
 
-## Features
-
-- Guided first-run setup and Microsoft account sign-in.
-- Horizon installation and update checks.
-- Separate Minecraft instances and instance management.
-- Browser for Horizon-compatible mods and modpack importing.
-- Launcher update checks.
-- Platform-specific packaging and application branding.
-
-## Important compatibility notes
+## Compatibility
 
 - A Microsoft account that owns Minecraft: Java Edition is required to play.
-- Horizon does not load arbitrary Java mod JAR files as-is. Use its compatible mod browser and supported modpack import.
-- Horizon's official Linux launcher is currently x86_64 only. The JLauncher Linux ARM64 package can run, but Horizon installation and gameplay on ARM64 remain unavailable until Horizon publishes an ARM64 Linux build.
-- The macOS application is currently unsigned and not notarized. macOS may require approval in Privacy & Security. Horizon must also provide a compatible macOS CLI package.
+- Mod support depends on Horizon compatibility. Arbitrary Java mod JAR files are not guaranteed to work.
+- Horizon's official Linux launcher availability is architecture-dependent. Linux ARM64 users may be able to run JLauncher, but Horizon gameplay requires an upstream ARM64 Linux release.
+- On macOS, Horizon must provide a compatible macOS launcher package. The JLauncher macOS app may also require user approval because it is not currently signed and notarized.
 
-## Repository layout
+## Getting help
 
-- `main`: project overview and logo.
-- `build`: Windows source and installer workflow.
-- `macos-build`: macOS source and packaging workflow.
-- `linux-build`: Linux source and packaging workflow.
+If you encounter a problem, include the JLauncher version, your operating system, and any relevant launcher logs when reporting it.
 
-JLauncher is an independent project and is not affiliated with Mojang Studios or Microsoft.
+JLauncher is an independent community project and is not affiliated with Mojang Studios or Microsoft.
