@@ -1,40 +1,48 @@
-<p align="center">
-  <img src="assets/jigarzon-logo.svg" alt="Jigarzon Launcher logo" width="160">
-</p>
-
-<h1 align="center">Jigarzon Launcher</h1>
+# JLauncher
 
 <p align="center">
-  A Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+  <img src="assets/jigarzon-logo.svg" alt="JLauncher logo" width="160">
 </p>
 
-Jigarzon Launcher is a Windows desktop launcher for Horizon, the Rust-based Minecraft: Java Edition client.
+<p align="center">
+  A desktop launcher for Horizon and Minecraft: Java Edition.
+</p>
+
+JLauncher is an independent desktop launcher project for managing Horizon installations, Minecraft Java Edition instances, compatible mods, and launcher updates.
+
+## Platform builds
+
+The project keeps each operating-system build on its own branch:
+
+| Platform | Source branch | Build workflow |
+|---|---|---|
+| Windows | [`build`](https://github.com/Jigar1234Nob/JLauncher/tree/build) | [Windows workflow](https://github.com/Jigar1234Nob/JLauncher/actions/workflows/build-windows.yml) |
+| macOS | [`macos-build`](https://github.com/Jigar1234Nob/JLauncher/tree/macos-build) | [macOS workflow](https://github.com/Jigar1234Nob/JLauncher/actions/workflows/build-macos.yml) |
+| Linux | [`linux-build`](https://github.com/Jigar1234Nob/JLauncher/tree/linux-build) | [Linux workflow](https://github.com/Jigar1234Nob/JLauncher/actions/workflows/build-linux.yml) |
+
+Download published installers and packages from [GitHub Releases](https://github.com/Jigar1234Nob/JLauncher/releases).
 
 ## Features
 
-- Guided Microsoft sign-in and first-run setup.
-- Automatically checks for Jigarzon Launcher updates at startup and installs newer published releases.
-- Checks Horizon's latest Nightly build on every startup and installs it when needed.
-- Reads the current Minecraft Java Edition version from Horizon's official project information (currently 26.3).
-- Home dashboard with the Jigarzon v2.00 release announcement and the current Horizon build label.
-- Prism-inspired dark interface with the JL purple/cyan identity.
-- Windows application icon, taskbar icon and Inno Setup installer branding.
-- Per-user Windows installer with Start Menu and optional desktop shortcuts.
-- Instance manager to create, select, rename, reinstall and delete instances.
-- Mod browser for Horizon-compatible content.
-- Open the selected instance's Horizon mods folder.
-- Optional Stats for Nerds developer gallery with live application logs and Horizon CLI access.
-- In-app reinstall and uninstall controls, including a choice to preserve Horizon and Minecraft files.
-- Drag and drop Horizon `.mrpack` or supported modpack `.zip` files to import them.
+- Guided first-run setup and Microsoft account sign-in.
+- Horizon installation and update checks.
+- Separate Minecraft instances and instance management.
+- Browser for Horizon-compatible mods and modpack importing.
+- Launcher update checks.
+- Platform-specific packaging and application branding.
 
-## Mods and compatibility
+## Important compatibility notes
 
-Horizon does not run arbitrary Java mod JARs as-is. Its mod browser checks and ports supported mod content. Dropping a raw `.jar` into Jigarzon will therefore not activate it; use Horizon's mod browser for compatible mods. Modpack files are imported as their own instance.
+- A Microsoft account that owns Minecraft: Java Edition is required to play.
+- Horizon does not load arbitrary Java mod JAR files as-is. Use its compatible mod browser and supported modpack import.
+- Horizon's official Linux launcher is currently x86_64 only. The JLauncher Linux ARM64 package can run, but Horizon installation and gameplay on ARM64 remain unavailable until Horizon publishes an ARM64 Linux build.
+- The macOS application is currently unsigned and not notarized. macOS may require approval in Privacy & Security. Horizon must also provide a compatible macOS CLI package.
 
-A Microsoft account that owns Minecraft: Java Edition is required. Minecraft assets are downloaded from Mojang through Horizon and are not bundled with Jigarzon.
+## Repository layout
 
-## Building on Windows
+- `main`: project overview and logo.
+- `build`: Windows source and installer workflow.
+- `macos-build`: macOS source and packaging workflow.
+- `linux-build`: Linux source and packaging workflow.
 
-The GitHub Actions workflow runs from `build` and builds both `JigarzonLauncher.exe` and `Jigarzon-Setup-Windows.exe`. It uses PyInstaller and Inno Setup. Push a version tag such as `v2.0.0` to publish the installer as a GitHub Release. Future releases are checked automatically when Jigarzon starts.
-
-Jigarzon is an independent project and is not affiliated with Mojang Studios or Microsoft.
+JLauncher is an independent project and is not affiliated with Mojang Studios or Microsoft.
