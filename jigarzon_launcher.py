@@ -1,6 +1,8 @@
 import hashlib, json, os, platform, queue, re, subprocess, sys, threading, urllib.request, zipfile
+if platform.system() == "Linux":
+    os.environ.setdefault("PYSTRAY_BACKEND", "xorg")
 import pystray
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk
 from pathlib import Path
 import tkinter as tk
 import webbrowser
@@ -19,7 +21,13 @@ RELEASES = "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=
 ctk.set_appearance_mode("dark")
 
 def data_dir():
-    p = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / "JigarzonLauncher"
+    if platform.system() == "Linux":
+        base = Path(os.getenv("XDG_DATA_HOME", str(Path.home() / ".local" / "share")))
+    elif platform.system() == "Darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.getenv("LOCALAPPDATA", str(Path.home())))
+    p = base / "JigarzonLauncher"
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -30,16 +38,26 @@ def settings():
 def save_settings(value):
     (data_dir() / "settings.json").write_text(json.dumps(value, indent=2), encoding="utf-8")
 
+def horizon_executable_names():
+    if platform.system() == "Linux":
+        return ("horizon-launcher",)
+    if platform.system() == "Darwin":
+        return ("horizon-launcher", "horizon")
+    return ("horizon-launcher.exe",)
+
 def locate_horizon():
     saved = settings().get("horizon_path", "")
     candidates = [Path(saved)] if saved else []
-    candidates += [data_dir() / "Horizon" / "horizon-launcher.exe",
-                   Path(os.getenv("LOCALAPPDATA", "")) / "Programs/Horizon/horizon-launcher.exe"]
+    candidates += [data_dir() / "Horizon" / name for name in horizon_executable_names()]
+    if platform.system() == "Windows":
+        candidates.append(Path(os.getenv("LOCALAPPDATA", "")) / "Programs/Horizon/horizon-launcher.exe")
     for p in candidates:
         if p.is_file(): return p
     folder = data_dir() / "Horizon"
     if folder.exists():
-        return next(iter(folder.rglob("horizon-launcher.exe")), None)
+        for name in horizon_executable_names():
+            found = next(iter(folder.rglob(name)), None)
+            if found: return found
     return None
 
 def install_horizon(progress):
@@ -48,7 +66,35 @@ def install_horizon(progress):
     with urllib.request.urlopen(req, timeout=30) as r: releases = json.loads(r.read().decode())
     release = next((r for r in releases if str(r.get("tag_name", "")).startswith("launcher@")), None)
     if not release: raise RuntimeError("No official Horizon launcher release was found.")
-    arm = (platform.machine().lower() in ("arm64", "aarch64") or os.getenv("PROCESSOR_ARCHITECTURE", "").upper() == "ARM64" or os.getenv("PROCESSOR_ARCHITEW6432", "").upper() == "ARM64")
+    system = platform.system()
+    machine = platform.machine().lower()
+    arm = machine in ("arm64", "aarch64")
+    if system == "Linux":
+        if arm:
+            raise RuntimeError("Horizon does not currently publish an official Linux ARM64 launcher. Linux Horizon support is currently x86_64 only.")
+        asset = next((a for a in release.get("assets", []) if a.get("name") == "horizon-launcher-linux-x86_64.AppImage"), None)
+        if not asset:
+            raise RuntimeError("The official Horizon release is missing horizon-launcher-linux-x86_64.AppImage.")
+        target = data_dir() / "Horizon"
+        target.mkdir(parents=True, exist_ok=True)
+        executable = target / "horizon-launcher"
+        progress("Downloading the official Horizon Linux AppImage…", .1)
+        req = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "Jigarzon-Launcher"})
+        digest, received, total = hashlib.sha256(), 0, int(asset.get("size") or 0)
+        with urllib.request.urlopen(req, timeout=90) as response, executable.open("wb") as out:
+            while True:
+                block = response.read(1024 * 1024)
+                if not block: break
+                out.write(block); digest.update(block); received += len(block)
+                progress("Downloading Horizon… " + str(round(received / 1048576, 1)) + " MB",
+                         min(.1 + .75 * received / total, .85) if total else .5)
+        expected = asset.get("digest") or ""
+        if expected.startswith("sha256:") and digest.hexdigest().lower() != expected.split(":", 1)[1].lower():
+            executable.unlink(missing_ok=True)
+            raise RuntimeError("The downloaded Horizon package failed its SHA-256 check.")
+        executable.chmod(executable.stat().st_mode | 0o111)
+        progress("Horizon is ready.", 1)
+        return executable
     filename = "horizon-launcher-windows-arm64.zip" if arm else "horizon-launcher-windows-x64.zip"
     asset = next((a for a in release.get("assets", []) if a.get("name") == filename), None)
     if not asset: raise RuntimeError("The official release is missing " + filename)
@@ -77,8 +123,13 @@ def install_horizon(progress):
             if dest != root and root not in dest.parents: raise RuntimeError("Unsafe path in Horizon archive.")
         z.extractall(target)
     archive.unlink(missing_ok=True)
-    exe = next(iter(target.rglob("horizon-launcher.exe")), None)
-    if not exe: raise RuntimeError("The package did not contain horizon-launcher.exe.")
+    exe = None
+    for name in horizon_executable_names():
+        exe = next(iter(target.rglob(name)), None)
+        if exe: break
+    if not exe: raise RuntimeError("The package did not contain a supported Horizon launcher executable.")
+    if platform.system() in ("Linux", "Darwin"):
+        exe.chmod(exe.stat().st_mode | 0o111)
     progress("Horizon is ready.", 1)
     return exe
 
@@ -96,9 +147,11 @@ def launcher_update_asset(assets):
         names += (["Jigarzon-Setup-Windows-arm64.exe", "Jigarzon-Setup-arm64.exe"] if arm64 else
                   ["Jigarzon-Setup-Windows-x64.exe", "Jigarzon-Setup-x64.exe"])
         names += ["Jigarzon-Setup.exe"]
+    elif system == "linux":
+        if machine not in ("x86_64", "amd64"):
+            return None
+        names = ["Jigarzon-Launcher-Linux-x86_64.deb", "Jigarzon-Launcher-Linux-x86_64.tar.gz"]
     else:
-        # Jigarzon is currently packaged for Windows only. Never download a
-        # Windows installer on macOS/Linux or pretend it can update those OSes.
         return None
     return next((a for name in names for a in assets if a.get("name") == name), None)
 
@@ -547,7 +600,12 @@ class Jigarzon:
             return
         folder=game_dir/"horizon-mods"
         folder.mkdir(parents=True,exist_ok=True)
-        os.startfile(str(folder))
+        if platform.system() == "Linux":
+            subprocess.Popen(["xdg-open", str(folder)])
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", str(folder)])
+        else:
+            os.startfile(str(folder))
 
     def on_drop(self,event):
         try:paths=[Path(p.strip("{}")) for p in self.root.tk.splitlist(event.data)]
@@ -703,6 +761,9 @@ class Jigarzon:
         if hasattr(self,"dev_console") and self.dev_console.winfo_exists():
             self.dev_console.configure(state="normal");self.dev_console.delete("1.0","end");self.dev_console.configure(state="disabled")
     def uninstall_jigarzon(self):
+        if platform.system() == "Linux":
+            messagebox.showinfo(APP, "To remove Jigarzon Launcher, uninstall the jigarzon-launcher package with your package manager (for Debian/Ubuntu: sudo apt remove jigarzon-launcher). Your settings and Horizon files are stored in ~/.local/share/JigarzonLauncher and are not removed automatically.")
+            return
         keep=messagebox.askyesno(APP,"Keep Horizon and Minecraft game files?\\n\\nYES keeps the Horizon installation, worlds and downloaded game files.\\nNO removes the Horizon folder as well.")
         uninstaller=Path(sys.executable).resolve().parent/"unins000.exe"
         if not uninstaller.is_file():
@@ -727,7 +788,8 @@ class Jigarzon:
                 with urllib.request.urlopen(req,timeout=20) as response:release=json.loads(response.read().decode("utf-8"))
                 asset=launcher_update_asset(release.get("assets",[]))
                 if not asset:raise RuntimeError("There is no Jigarzon installer published for this operating system and architecture yet.")
-                target=data_dir()/"Jigarzon-Setup-reinstall.exe"
+                suffix = ".deb" if asset["name"].lower().endswith(".deb") else (".tar.gz" if asset["name"].lower().endswith(".tar.gz") else ".exe")
+                target=data_dir()/("Jigarzon-Setup-reinstall"+suffix)
                 req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
                 with urllib.request.urlopen(req,timeout=90) as response,target.open("wb") as out:
                     while True:
@@ -782,7 +844,8 @@ class Jigarzon:
                     return
                 self.jobs.put(("log","Jigarzon Launcher update "+tag+" found. Downloading installer…"))
                 req=urllib.request.Request(asset["browser_download_url"],headers={"User-Agent":"Jigarzon-Launcher"})
-                installer=data_dir()/"Jigarzon-Setup-update.exe"
+                suffix = ".deb" if asset["name"].lower().endswith(".deb") else (".tar.gz" if asset["name"].lower().endswith(".tar.gz") else ".exe")
+                installer=data_dir()/("Jigarzon-Setup-update"+suffix)
                 digest=hashlib.sha256()
                 with urllib.request.urlopen(req,timeout=60) as response,installer.open("wb") as out:
                     while True:
@@ -811,8 +874,14 @@ class Jigarzon:
     def set_window_icon(self,window):
         try:
             base=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
-            icon=base/"assets"/"jigarzon.ico"
-            if icon.is_file():window.iconbitmap(str(icon))
+            if platform.system() == "Linux":
+                icon=base/"assets"/"jigarzon.png"
+                if icon.is_file():
+                    self._window_icon=ImageTk.PhotoImage(Image.open(icon))
+                    window.iconphoto(True,self._window_icon)
+            else:
+                icon=base/"assets"/"jigarzon.ico"
+                if icon.is_file():window.iconbitmap(str(icon))
         except Exception:pass
 
     def download_horizon(self):
@@ -826,7 +895,10 @@ class Jigarzon:
         threading.Thread(target=worker, daemon=True).start()
 
     def browse(self):
-        path = filedialog.askopenfilename(filetypes=[("Horizon launcher", "horizon-launcher.exe"), ("Applications", "*.exe")])
+        if platform.system() == "Linux":
+            path = filedialog.askopenfilename(filetypes=[("Horizon launcher", "horizon-launcher"), ("AppImage", "*.AppImage"), ("All files", "*")])
+        else:
+            path = filedialog.askopenfilename(filetypes=[("Horizon launcher", "horizon-launcher.exe"), ("Applications", "*.exe")])
         if path:
             self.exe.set(path); self.save()
             if hasattr(self, "path_label"): self.path_label.configure(text=path)
@@ -970,8 +1042,12 @@ class Jigarzon:
                     self.install_launcher_update(val)
                 elif kind == "reinstall_ready":
                     self.log("Latest Jigarzon installer downloaded. Starting setup.")
-                    subprocess.Popen([val])
-                    self.root.after(300,self.exit_app)
+                    if platform.system() == "Linux" and val.endswith(".deb"):
+                        subprocess.Popen(["pkexec","apt-get","install","-y",val])
+                        self.root.after(300,self.exit_app)
+                    else:
+                        subprocess.Popen([val])
+                        self.root.after(300,self.exit_app)
                 elif kind == "result":
                     code, out, label, callback, isjson = val; self.busy = False
                     if label == "Checking for Horizon updates":
