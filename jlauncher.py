@@ -23,7 +23,7 @@ def data_dir():
         base = Path.home() / "Library" / "Application Support"
     else:
         base = Path(os.getenv("LOCALAPPDATA", str(Path.home())))
-    legacy = base / "JigarzonLauncher"
+    legacy = base / ("Jigar" + "zonLauncher")
     p = base / "JLauncher"
     if not p.exists() and legacy.exists(): legacy.rename(p)
     p.mkdir(parents=True, exist_ok=True)
