@@ -112,8 +112,6 @@ jobs:
           DESKTOP
           cat > "$PKG/DEBIAN/control" <<CONTROL
           Package: jlauncher
-          Conflicts: jigarzon-launcher
-          Replaces: jigarzon-launcher
           Version: ${JLAUNCHER_BUILD_VERSION}
           Section: games
           Priority: optional
